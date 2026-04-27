@@ -1,0 +1,259 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background-color: #F7F8FC;
+    color: #1E293B;
+    font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
+      'Segoe UI', 'Malgun Gothic', sans-serif;
+    font-feature-settings: "kern" 1;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5 {
+    letter-spacing: -0.025em;
+    font-weight: 600;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background-color: #4F46E5;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 0.625rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    letter-spacing: -0.01em;
+    transition: all 0.15s ease;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-primary:hover { background-color: #4338CA; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background-color: #F1F5F9;
+    color: #475569;
+    padding: 0.5rem 1rem;
+    border-radius: 0.625rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    letter-spacing: -0.01em;
+    transition: all 0.15s ease;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-secondary:hover { background-color: #E2E8F0; }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background-color: transparent;
+    color: #64748B;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.625rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    transition: all 0.15s ease;
+    border: 1px solid #E2E8F0;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-ghost:hover { background-color: #F8FAFC; color: #334155; }
+
+  /* Cards */
+  .card {
+    background-color: #FFFFFF;
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.04);
+    border: 1px solid #F1F5F9;
+  }
+
+  .card-section {
+    background-color: #FFFFFF;
+    border-radius: 0.875rem;
+    border: 1px solid #E8EDF5;
+    overflow: hidden;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    letter-spacing: 0;
+  }
+  .badge-present { background-color: #DCFCE7; color: #15803D; }
+  .badge-absent  { background-color: #FEE2E2; color: #DC2626; }
+  .badge-late    { background-color: #FEF9C3; color: #A16207; }
+  .badge-early   { background-color: #FFEDD5; color: #C2410C; }
+
+  /* Stat card */
+  .stat-card {
+    background-color: #FFFFFF;
+    border-radius: 1rem;
+    border: 1px solid #F1F5F9;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.04);
+  }
+
+  /* Table */
+  .data-table {
+    width: 100%;
+    font-size: 0.8125rem;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+  .data-table thead tr {
+    background-color: #F8FAFC;
+    border-bottom: 1px solid #E8EDF5;
+  }
+  .data-table thead th {
+    text-align: left;
+    padding: 0.625rem 0.75rem;
+    font-weight: 600;
+    color: #64748B;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;       /* 헤더 줄바꿈 방지 */
+    width: 1px;                /* 모든 컬럼: 내용 크기에 최대한 맞춤 */
+  }
+  .data-table tbody tr {
+    border-bottom: 1px solid #F8FAFC;
+    transition: background-color 0.1s;
+  }
+  .data-table tbody tr:hover { background-color: #FAFBFE; }
+  .data-table tbody td {
+    padding: 0.5rem 0.75rem;
+    color: #334155;
+    white-space: nowrap;       /* 기본: 줄바꿈 없음 */
+    vertical-align: middle;
+  }
+  /* 긴 텍스트 컬럼 (textarea / 주소 / 메모 등) — 줄바꿈 허용 + 폭 제한 */
+  .data-table td.cell-wrap {
+    white-space: normal;
+    max-width: 200px;
+    min-width: 100px;
+    vertical-align: top;
+  }
+  /* 배지/칩처럼 인라인 flex가 필요한 셀 */
+  .data-table td.cell-flex {
+    white-space: nowrap;
+  }
+
+  /* Tag */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.375rem;
+  }
+
+  /* Input */
+  .form-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #E2E8F0;
+    border-radius: 0.625rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: #1E293B;
+    background-color: #FAFBFE;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+  }
+  .form-input:focus {
+    border-color: #818CF8;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+    background-color: #FFFFFF;
+  }
+
+  /* Select */
+  .form-select {
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    border: 1px solid #E2E8F0;
+    border-radius: 0.625rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: #1E293B;
+    background-color: #FAFBFE;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394A3B8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    outline: none;
+    cursor: pointer;
+  }
+  .form-select:focus {
+    border-color: #818CF8;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  }
+
+  /* Page header */
+  .page-header {
+    margin-bottom: 1.5rem;
+  }
+  .page-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0F172A;
+    letter-spacing: -0.03em;
+  }
+  .page-subtitle {
+    font-size: 0.8125rem;
+    color: #94A3B8;
+    margin-top: 0.25rem;
+  }
+
+  /* Sidebar */
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.625rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #64748B;
+    text-decoration: none;
+    transition: all 0.15s;
+    margin: 0 0.5rem;
+  }
+  .sidebar-link:hover {
+    background-color: #F1F5F9;
+    color: #334155;
+  }
+  .sidebar-link.active {
+    background-color: #EEF2FF;
+    color: #4338CA;
+    font-weight: 600;
+  }
+}
