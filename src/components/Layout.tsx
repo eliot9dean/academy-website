@@ -192,7 +192,7 @@ export default function Layout() {
         <div
           className="flex items-center gap-2.5 px-4 h-14 cursor-pointer"
           style={{ background: SB.bgHeader, borderBottom: `1px solid ${SB.divider}` }}
-          onClick={() => { logout(); navigate('/'); }}
+          onClick={() => navigate(navItems[0].to)}
         >
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
