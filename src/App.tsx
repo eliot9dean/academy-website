@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import Layout from './components/Layout';
 
 // Admin
+import AdminHubPage from './pages/admin/AdminHubPage';
 import AdminClassesPage from './pages/admin/AdminClassesPage';
 import AdminSchedulePage from './pages/admin/AdminSchedulePage';
 import AdminDailyReportsPage from './pages/admin/AdminDailyReportsPage';
@@ -36,7 +37,7 @@ export default function App() {
 
           {/* Admin */}
           <Route path="/admin" element={<Layout />}>
-            <Route index element={<Navigate to="/admin/classes" replace />} />
+            <Route index element={<AdminHubPage />} />
             <Route path="classes" element={<AdminClassesPage />} />
             <Route path="schedule" element={<AdminSchedulePage />} />
             <Route path="daily-reports" element={<AdminDailyReportsPage />} />
