@@ -321,8 +321,9 @@ export default function AdminSchedulePage() {
               const dow         = (firstDay + i) % 7;
               const totalCount  = dayEvents.length + bomналDay.length;
               return (
-                <button key={day} onClick={() => setSelectedDate(dateStr)}
-                  className="min-h-[80px] p-2 rounded-lg text-left transition-all"
+                <div key={day}
+                  className="relative min-h-[80px] p-2 rounded-lg text-left transition-all cursor-pointer group"
+                  onClick={() => setSelectedDate(dateStr)}
                   style={{
                     background: isSelected ? '#EEF2FF' : isToday ? '#F0FDF4' : 'transparent',
                     border: isSelected ? '2px solid #818CF8' : isToday ? '2px solid #86EFAC' : '1.5px solid transparent',
@@ -351,7 +352,21 @@ export default function AdminSchedulePage() {
                       <div className="text-xs font-semibold" style={{ color: '#94A3B8' }}>+{totalCount-2}개</div>
                     )}
                   </div>
-                </button>
+                  {/* 호버 시 일정 추가 버튼 */}
+                  <button
+                    className="absolute bottom-1 right-1 w-5 h-5 rounded-full text-xs font-bold
+                               opacity-0 group-hover:opacity-100 transition-opacity
+                               flex items-center justify-center shadow-sm"
+                    style={{ background: '#6366F1', color: '#fff' }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      setSelectedDate(dateStr);
+                      setForm(prev => ({ ...prev, date: dateStr }));
+                      setShowModal(true);
+                    }}
+                    title={`${dateStr} 일정 추가`}
+                  >+</button>
+                </div>
               );
             })}
           </div>
@@ -374,18 +389,43 @@ export default function AdminSchedulePage() {
             return (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {/* 봄날 공지 카드 */}
-                {bomналDay.map(ev => (
-                  <div key={`b-${ev.id}`} className="rounded-xl p-3" style={{ background: '#FFF5F5', border: '1px solid #FECACA' }}>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
-                        style={{ background: '#FEE2E2', color: '#DC2626' }}>📢 봄날</span>
+                {bomналDay.map(ev => {
+                  // end date: imweb은 exclusive end이므로 하루 빼기
+                  const endDisplay = ev.end && ev.end > ev.start
+                    ? new Date(new Date(ev.end).getTime() - 86400000).toISOString().slice(0,10)
+                    : ev.start;
+                  const isSingleDay = endDisplay === ev.start;
+                  return (
+                    <div key={`b-${ev.id}`} className="rounded-xl p-3" style={{ background: '#FFF5F5', border: '1px solid #FECACA' }}>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
+                          style={{ background: '#FEE2E2', color: '#DC2626' }}>📢 봄날 학원공지</span>
+                      </div>
+                      <h4 className="font-bold text-sm mb-1" style={{ color: '#991B1B' }}>{ev.title}</h4>
+                      <div className="space-y-0.5 text-xs" style={{ color: '#EF4444' }}>
+                        <div>🗓 {ev.start}{!isSingleDay ? ` ~ ${endDisplay}` : ''}</div>
+                        {/* 내용(description) */}
+                        {ev.description && (
+                          <div className="mt-1 pt-1 border-t text-xs whitespace-pre-wrap"
+                            style={{ color: '#7F1D1D', borderColor: '#FECACA' }}>
+                            {ev.description}
+                          </div>
+                        )}
+                        {/* URL */}
+                        {ev.url && (
+                          <div className="mt-1 pt-1 border-t" style={{ borderColor: '#FECACA' }}>
+                            <a href={ev.url} target="_blank" rel="noopener noreferrer"
+                              className="text-xs underline break-all"
+                              style={{ color: '#B91C1C' }}
+                              onClick={e => e.stopPropagation()}>
+                              🔗 {ev.url}
+                            </a>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <h4 className="font-bold text-sm" style={{ color: '#991B1B' }}>{ev.title}</h4>
-                    <div className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                      🗓 {ev.start}{ev.end !== ev.start && ev.end > ev.start ? ` ~ ${new Date(new Date(ev.end).getTime() - 86400000).toISOString().slice(0,10)}` : ''}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {/* 내부 일정 카드 */}
                 {selectedEvents.sort((a,b) => a.startTime.localeCompare(b.startTime)).map(ev => {
                   const cfg = TYPE_CONFIG[ev.type];
