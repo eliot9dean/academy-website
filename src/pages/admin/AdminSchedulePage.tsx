@@ -169,8 +169,17 @@ export default function AdminSchedulePage() {
   const syncRef = useRef(syncBomnal);
   useEffect(() => { syncRef.current = syncBomnal; }, [syncBomnal]);
 
-  // 월이 바뀔 때 즉시 갱신
+  // 월이 바뀔 때 즉시 갱신 (최초 마운트 포함 → 로그인·새로고침 시 자동 동기화)
   useEffect(() => { syncBomnal(); }, [syncBomnal]);
+
+  // 탭/창으로 돌아올 때 재동기화 (페이지 숨김→표시 전환)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') syncRef.current();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   // 스케줄 동기화: 10시·14시·18시·22시 정각에 자동 실행
   useEffect(() => {
@@ -322,12 +331,19 @@ export default function AdminSchedulePage() {
               const totalCount  = dayEvents.length + bomналDay.length;
               return (
                 <div key={day}
-                  className="relative min-h-[80px] p-2 rounded-lg text-left transition-all cursor-pointer group"
+                  className="relative min-h-[80px] p-2 rounded-lg text-left transition-all cursor-pointer select-none"
                   onClick={() => setSelectedDate(dateStr)}
+                  onDoubleClick={() => {
+                    setSelectedDate(dateStr);
+                    setForm(prev => ({ ...prev, date: dateStr }));
+                    setShowModal(true);
+                  }}
                   style={{
                     background: isSelected ? '#EEF2FF' : isToday ? '#F0FDF4' : 'transparent',
                     border: isSelected ? '2px solid #818CF8' : isToday ? '2px solid #86EFAC' : '1.5px solid transparent',
-                  }}>
+                  }}
+                  title="더블클릭: 일정 추가"
+                >
                   <div className="text-base font-extrabold mb-1 flex items-center gap-1"
                     style={{ color: isToday ? '#16A34A' : dow===0 ? '#EF4444' : dow===6 ? '#3B82F6' : '#1E293B' }}>
                     {day}
@@ -352,20 +368,6 @@ export default function AdminSchedulePage() {
                       <div className="text-xs font-semibold" style={{ color: '#94A3B8' }}>+{totalCount-2}개</div>
                     )}
                   </div>
-                  {/* 호버 시 일정 추가 버튼 */}
-                  <button
-                    className="absolute bottom-1 right-1 w-5 h-5 rounded-full text-xs font-bold
-                               opacity-0 group-hover:opacity-100 transition-opacity
-                               flex items-center justify-center shadow-sm"
-                    style={{ background: '#6366F1', color: '#fff' }}
-                    onClick={e => {
-                      e.stopPropagation();
-                      setSelectedDate(dateStr);
-                      setForm(prev => ({ ...prev, date: dateStr }));
-                      setShowModal(true);
-                    }}
-                    title={`${dateStr} 일정 추가`}
-                  >+</button>
                 </div>
               );
             })}
@@ -395,6 +397,10 @@ export default function AdminSchedulePage() {
                     ? new Date(new Date(ev.end).getTime() - 86400000).toISOString().slice(0,10)
                     : ev.start;
                   const isSingleDay = endDisplay === ev.start;
+                  // imweb이 url 필드명을 다양하게 사용할 수 있으므로 여러 후보 체크
+                  const eventUrl: string =
+                    ev.url || ev.link || ev.boardUrl || ev.pageUrl ||
+                    ev.extendedProps?.url || ev.extendedProps?.link || '';
                   return (
                     <div key={`b-${ev.id}`} className="rounded-xl p-3" style={{ background: '#FFF5F5', border: '1px solid #FECACA' }}>
                       <div className="flex items-center gap-1.5 mb-1.5">
@@ -412,13 +418,13 @@ export default function AdminSchedulePage() {
                           </div>
                         )}
                         {/* URL */}
-                        {ev.url && (
+                        {eventUrl && (
                           <div className="mt-1 pt-1 border-t" style={{ borderColor: '#FECACA' }}>
-                            <a href={ev.url} target="_blank" rel="noopener noreferrer"
+                            <a href={eventUrl} target="_blank" rel="noopener noreferrer"
                               className="text-xs underline break-all"
                               style={{ color: '#B91C1C' }}
                               onClick={e => e.stopPropagation()}>
-                              🔗 {ev.url}
+                              🔗 {eventUrl}
                             </a>
                           </div>
                         )}

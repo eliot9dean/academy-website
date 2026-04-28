@@ -31,8 +31,29 @@ export async function onRequestGet(context) {
 
     const text = await res.text();
     // 빈 응답이면 빈 배열 반환
-    const json = text.trim() || '[]';
-    return new Response(json, { headers: corsHeaders });
+    const raw = text.trim() || '[]';
+
+    // imweb이 각 이벤트에 어떤 필드를 반환하는지 확인 후
+    // url 필드명이 다를 경우 정규화
+    let events = [];
+    try { events = JSON.parse(raw); } catch { /* 무시 */ }
+
+    if (Array.isArray(events)) {
+      events = events.map(ev => {
+        // imweb은 url 필드를 'url', 'link', 'boardUrl' 등으로 반환할 수 있음
+        // extendedProps 안에 있을 경우도 처리
+        const rawUrl =
+          ev.url ||
+          ev.link ||
+          ev.boardUrl ||
+          ev.extendedProps?.url ||
+          ev.extendedProps?.link ||
+          '';
+        return { ...ev, url: rawUrl };
+      });
+    }
+
+    return new Response(JSON.stringify(events), { headers: corsHeaders });
   } catch {
     return new Response('[]', { headers: corsHeaders });
   }
