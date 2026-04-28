@@ -10,9 +10,26 @@ interface Props {
   refreshKey?: number; // 값이 바뀌면 RSS 재요청
 }
 
-const RSS_URL  = 'https://www.bomnal.net/rss';
-const API_URL  = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}&count=10`;
+const RSS_URL      = 'https://www.bomnal.net/rss';
+const RSS2JSON_URL = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}&count=15`;
 const SPEED_PX = 60; // 초당 픽셀 (클수록 빠름)
+
+async function fetchRssItems(): Promise<RssItem[]> {
+  // 1순위: Cloudflare Pages Function (캐시 없이 최신 데이터)
+  try {
+    const res = await fetch('/api/rss');
+    if (res.ok) {
+      const data = await res.json() as { status: string; items: RssItem[] };
+      if (data.status === 'ok' && data.items.length > 0) return data.items;
+    }
+  } catch { /* 로컬 개발 환경 → 폴백 */ }
+
+  // 폴백: rss2json.com
+  const res = await fetch(RSS2JSON_URL);
+  const data = await res.json() as { status: string; items: RssItem[] };
+  if (data.status === 'ok' && Array.isArray(data.items)) return data.items.slice(0, 15);
+  return [];
+}
 
 export default function RssTicker({ refreshKey = 0 }: Props) {
   const [items, setItems] = useState<RssItem[]>([]);
@@ -23,14 +40,10 @@ export default function RssTicker({ refreshKey = 0 }: Props) {
   // RSS 가져오기 (refreshKey 변경 시 재요청)
   useEffect(() => {
     setError(false);
-    fetch(API_URL)
-      .then(r => r.json())
-      .then(data => {
-        if (data.status === 'ok' && Array.isArray(data.items)) {
-          setItems(data.items.slice(0, 10));
-        } else {
-          setError(true);
-        }
+    fetchRssItems()
+      .then(list => {
+        if (list.length > 0) setItems(list);
+        else setError(true);
       })
       .catch(() => setError(true));
   }, [refreshKey]);

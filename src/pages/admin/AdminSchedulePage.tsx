@@ -7,8 +7,28 @@ import type { ScheduleEvent, ConsultationRecord } from '../../types';
 interface BomналEvent {
   id: string;
   title: string;
-  start: string; // YYYY-MM-DD
-  end: string;   // YYYY-MM-DD (exclusive — 다음날)
+  start: string;     // YYYY-MM-DD
+  end: string;       // YYYY-MM-DD (exclusive — 다음날)
+  className?: string; // 카테고리/색상 클래스 (학원공지 필터링용)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any; // imweb 추가 필드 수신용
+}
+
+/** "학원공지" 이벤트인지 판별 — className 또는 추가 필드 기반 */
+function isHakwonNotice(e: BomналEvent): boolean {
+  const haystack = [
+    e.className ?? '',
+    e.category ?? '',
+    e.calendarId ?? '',
+    e.groupId ?? '',
+    e.board_code ?? '',
+  ].join(' ').toLowerCase();
+  // 명시적으로 학원공지 키워드가 있으면 포함
+  if (haystack.includes('학원공지') || haystack.includes('hakwon')) return true;
+  // 반대로 다른 카테고리가 명확히 있으면 제외 (예: 개인일정, 강사일정 등)
+  if (haystack.includes('개인') || haystack.includes('강사전용')) return false;
+  // 위 조건에 해당 안 하면 기본 포함 (board_code 자체가 학원공지 캘린더일 경우)
+  return true;
 }
 
 const BOMNAL_BOARD = 'b202604282b278728a1ac3';
@@ -132,22 +152,17 @@ export default function AdminSchedulePage() {
 
   // ── 봄날 캘린더 자동 동기화 ─────────────────────────────────────────────
   const [bomналEvents, setBomналEvents] = useState<BomналEvent[]>([]);
-  const [bomналLoading, setBomналLoading] = useState(false);
-  const [bomналLastSync, setBomналLastSync] = useState<string | null>(null);
   const [rssRefreshKey, setRssRefreshKey] = useState(0);
 
   // 동기화 시간: 10시, 14시, 18시, 22시
   const SYNC_HOURS = [10, 14, 18, 22];
 
   const syncBomnal = useCallback(async () => {
-    setBomналLoading(true);
     try {
       const data = await fetchBomналMonth(year, month);
-      setBomналEvents(data);
-      setBomналLastSync(new Date().toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' }));
-    } catch { /* 무시 */ } finally {
-      setBomналLoading(false);
-    }
+      // 학원공지 카테고리만 필터링
+      setBomналEvents(data.filter(isHakwonNotice));
+    } catch { /* 무시 */ }
   }, [year, month]);
 
   // syncBomnal의 최신 버전을 ref로 유지 (스케줄러 클로저 문제 방지)
@@ -246,22 +261,6 @@ export default function AdminSchedulePage() {
           <p className="page-subtitle">상담, 회의, 행사, 외부 미팅 일정</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* 봄날 동기화 상태 표시 (버튼 없음 — 스케줄 자동 실행) */}
-          <div
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
-            style={{ borderColor: '#FECACA', border: '1px solid #FECACA', background: '#FFF5F5', color: '#DC2626' }}
-          >
-            <span>{bomналLoading ? '⏳' : '📢'}</span>
-            <span className="font-medium">{bomналLoading ? '동기화 중...' : '봄날'}</span>
-            {bomналLastSync && !bomналLoading && (
-              <span style={{ color: '#94A3B8' }}>{bomналLastSync}</span>
-            )}
-            {!bomналLoading && (
-              <span style={{ color: '#94A3B8', fontSize: '0.65rem' }}>
-                (10·14·18·22시 자동갱신)
-              </span>
-            )}
-          </div>
           <button onClick={() => { setForm({ ...form, date: selectedDate }); setShowModal(true); }} className="btn-primary">
             + 일정 추가
           </button>
