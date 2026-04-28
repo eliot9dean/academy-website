@@ -51,11 +51,11 @@ function SignUpForm({ onBack }: { onBack: () => void }) {
 
   if (success) return (
     <div className="text-center py-8 space-y-4">
-      <div className="text-5xl">✅</div>
-      <p className="font-bold text-gray-800">가입이 완료되었습니다!</p>
+      <div className="text-5xl">📋</div>
+      <p className="font-bold text-gray-800">가입 신청이 완료되었습니다!</p>
       <p className="text-sm text-gray-500">
-        이메일 확인이 필요한 경우 메일함을 확인하세요.<br/>
-        확인 후 로그인하실 수 있습니다.
+        관리자 승인 후 로그인하실 수 있습니다.<br/>
+        승인까지 잠시 기다려 주세요.
       </p>
       <button
         onClick={onBack}

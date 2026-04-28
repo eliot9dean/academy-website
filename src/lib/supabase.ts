@@ -9,7 +9,6 @@ import type { User } from '../types';
 type Row = Record<string, any>;
 
 // ── 싱글턴 클라이언트 ─────────────────────────────────────────────────────────
-// SUPABASE_ENABLED=false 일 때도 import 오류 방지를 위해 빈 URL로 생성
 export const supabase = createClient(
   SUPABASE_URL  || 'https://placeholder.supabase.co',
   SUPABASE_ANON_KEY || 'placeholder',
@@ -23,7 +22,7 @@ function profileToUser(profile: Row): User {
   };
 }
 
-// ── 로그인 ────────────────────────────────────────────────────────────────────
+// ── 로그인 (status 확인 포함) ─────────────────────────────────────────────────
 export async function supabaseLogin(
   email: string,
   password: string,
@@ -39,6 +38,16 @@ export async function supabaseLogin(
     .select('*')
     .eq('id', data.user.id)
     .single();
+
+  // 승인 대기 / 거절 상태 처리
+  if (profile?.status === 'pending') {
+    await supabase.auth.signOut();
+    return { ok: false, error: '관리자 승인 대기 중입니다. 승인 후 로그인하실 수 있습니다.' };
+  }
+  if (profile?.status === 'rejected') {
+    await supabase.auth.signOut();
+    return { ok: false, error: '가입이 거절되었습니다. 관리자에게 문의하세요.' };
+  }
 
   return { ok: true, user: profile ? profileToUser(profile) : undefined };
 }
@@ -59,6 +68,7 @@ export async function supabaseGetCurrentUser(): Promise<User | null> {
     .eq('id', session.user.id)
     .single();
 
+  if (profile?.status === 'pending' || profile?.status === 'rejected') return null;
   return profile ? profileToUser(profile) : null;
 }
 
@@ -84,7 +94,7 @@ export async function supabaseSaveTable(tableName: string, rows: Row[]): Promise
     .upsert({ name: tableName, data: rows }, { onConflict: 'name' });
 }
 
-// ── 회원가입 ──────────────────────────────────────────────────────────────────
+// ── 회원가입 (승인 대기 방식) ─────────────────────────────────────────────────
 export async function supabaseSignUp(
   email: string,
   password: string,
@@ -101,54 +111,119 @@ export async function supabaseSignUp(
     return { ok: false, error: error?.message ?? '회원가입 실패' };
   }
 
-  // 2. 트리거가 user_profiles를 생성한 뒤 name/role을 올바르게 업데이트
-  //    (메타데이터 전달이 불안정한 경우를 대비해 직접 UPDATE)
   if (data.session) {
-    // 약간의 지연으로 트리거 완료 대기
+    // 트리거 완료 대기
     await new Promise(r => setTimeout(r, 500));
 
-    // 2-a. user_profiles 업데이트
+    // 2. user_profiles: name, role, status='pending' 업데이트
     await supabase
       .from('user_profiles')
-      .update({ name, role })
+      .update({ name, role, status: 'pending' })
       .eq('id', data.user.id);
 
-    // 2-b. ams_tables.users 에도 추가 (앱 사용자 목록 동기화)
+    // 3. ams_tables.pending_users 에 추가 (관리자 승인 목록용)
     try {
-      // 현재 users 목록 조회
-      const { data: amsRow } = await supabase
+      const { data: pendingRow } = await supabase
         .from('ams_tables')
         .select('data')
-        .eq('name', 'users')
+        .eq('name', 'pending_users')
         .single();
 
-      const currentUsers: Row[] = (amsRow?.data as Row[]) ?? [];
-
-      // 이미 같은 이메일이 있으면 스킵
-      const alreadyExists = currentUsers.some(u => u.email === email);
-      if (!alreadyExists) {
-        // 새 app_user_id 생성 (u1, u2, ... 중 최댓값 + 1)
-        const maxNum = currentUsers.reduce((max, u) => {
-          const match = String(u.id ?? '').match(/\d+$/);
-          return match ? Math.max(max, parseInt(match[0])) : max;
-        }, 0);
-        const newAppId = `u${maxNum + 1}`;
-
-        // user_profiles.app_user_id 도 업데이트
-        await supabase
-          .from('user_profiles')
-          .update({ app_user_id: newAppId })
-          .eq('id', data.user.id);
-
-        // ams_tables.users 저장
-        const newUser: Row = { id: newAppId, name, role, email };
+      const current: Row[] = (pendingRow?.data as Row[]) ?? [];
+      const already = current.some(p => p.email === email);
+      if (!already) {
+        const newPending: Row = {
+          supabaseId: data.user.id,
+          name,
+          email,
+          role,
+          requestedAt: new Date().toISOString(),
+        };
         await supabase
           .from('ams_tables')
-          .upsert({ name: 'users', data: [...currentUsers, newUser] }, { onConflict: 'name' });
+          .upsert({ name: 'pending_users', data: [...current, newPending] }, { onConflict: 'name' });
       }
-    } catch {
-      // ams_tables 동기화 실패는 무시 (로그인은 정상 진행)
-    }
+    } catch { /* 무시 */ }
+
+    // 4. 승인 전까지 세션 종료
+    await supabase.auth.signOut();
+  }
+
+  return { ok: true };
+}
+
+// ── 관리자: 가입 신청 승인 ────────────────────────────────────────────────────
+// AdminHubPage에서 newAppId를 계산해서 전달 (ams_tables 업데이트는 훅으로 처리)
+export async function supabaseAdminApproveUser(
+  supabaseId: string,
+  newRole: string,
+  newName: string,
+  newAppId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.rpc('approve_pending_user', {
+    target_id: supabaseId,
+    new_role: newRole,
+    new_name: newName,
+    new_app_id: newAppId,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// ── 관리자: 가입 신청 거절 ────────────────────────────────────────────────────
+export async function supabaseAdminRejectUser(
+  supabaseId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.rpc('reject_pending_user', { target_id: supabaseId });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// ── 관리자: 사용자 직접 추가 (별도 세션으로 가입, 이메일 발송 옵션) ───────────
+export async function supabaseAdminCreateUser(
+  email: string,
+  name: string,
+  role: string,
+  newAppId: string,
+  sendEmail: boolean,
+): Promise<{ ok: boolean; error?: string }> {
+  // 임시 비밀번호 생성 (사용자는 이메일로 재설정 예정)
+  const tempPw = Array.from({ length: 16 }, () =>
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[
+      Math.floor(Math.random() * 62)
+    ]
+  ).join('');
+
+  // ※ 별도 클라이언트 인스턴스 사용 → 관리자 세션 보존
+  const tempClient = createClient(
+    SUPABASE_URL || 'https://placeholder.supabase.co',
+    SUPABASE_ANON_KEY || 'placeholder',
+  );
+
+  const { data, error } = await tempClient.auth.signUp({
+    email,
+    password: tempPw,
+    options: { data: { name, role } },
+  });
+
+  if (error || !data.user) {
+    return { ok: false, error: error?.message ?? '사용자 생성 실패' };
+  }
+
+  // 트리거 완료 대기
+  await new Promise(r => setTimeout(r, 600));
+
+  // user_profiles 업데이트 (tempClient → 자신의 row 수정 가능)
+  await tempClient
+    .from('user_profiles')
+    .update({ name, role, status: 'approved', app_user_id: newAppId })
+    .eq('id', data.user.id);
+
+  // 이메일 발송: 비밀번호 설정 링크 전송
+  if (sendEmail) {
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/',
+    });
   }
 
   return { ok: true };
