@@ -169,7 +169,7 @@ function ChangePasswordModal({ onClose, currentEmail }: { onClose: () => void; c
 
 // ─── 메인 레이아웃 ─────────────────────────────────────────────────────────
 export default function Layout() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, viewAsUser, setViewAsUser, logout } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
   const [collapsed,   setCollapsed]   = useState(false);
@@ -177,9 +177,11 @@ export default function Layout() {
 
   if (!currentUser) { navigate('/'); return null; }
 
-  const navItems   = navByRole[currentUser.role];
-  const activeItem = navItems.find(n => location.pathname.startsWith(n.to));
-  const badge      = roleBadgeDark[currentUser.role];
+  // 관리자가 다른 역할로 보기 중이면 해당 역할 기준으로 표시
+  const displayUser = viewAsUser ?? currentUser;
+  const navItems    = navByRole[displayUser.role];
+  const activeItem  = navItems.find(n => location.pathname.startsWith(n.to));
+  const badge       = roleBadgeDark[displayUser.role];
 
   return (
     <div className="flex h-screen" style={{ background: '#DDE3EE' }}>
@@ -192,7 +194,7 @@ export default function Layout() {
         <div
           className="flex items-center gap-2.5 px-4 h-14 cursor-pointer"
           style={{ background: SB.bgHeader, borderBottom: `1px solid ${SB.divider}` }}
-          onClick={() => navigate(currentUser.role === 'admin' ? '/admin' : navItems[0].to)}
+          onClick={() => { setViewAsUser(null); navigate(currentUser.role === 'admin' ? '/admin' : navItems[0].to); }}
         >
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -215,18 +217,25 @@ export default function Layout() {
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
                 style={{ background: 'rgba(99,102,241,0.3)', color: '#A5B4FC' }}
               >
-                {currentUser.name[0]}
+                {displayUser.name[0]}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold truncate" style={{ color: SB.textMain }}>
-                  {currentUser.name}
+                  {displayUser.name}
                 </div>
-                <span
-                  className="text-xs font-medium px-1.5 py-0.5 rounded-md"
-                  style={{ background: badge.bg, color: badge.text }}
-                >
-                  {roleLabel[currentUser.role]}
-                </span>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span
+                    className="text-xs font-medium px-1.5 py-0.5 rounded-md"
+                    style={{ background: badge.bg, color: badge.text }}
+                  >
+                    {roleLabel[displayUser.role]}
+                  </span>
+                  {viewAsUser && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(239,68,68,0.2)', color: '#FCA5A5' }}>
+                      관리자 보기
+                    </span>
+                  )}
+                </div>
               </div>
               {/* 비밀번호 변경 버튼 — API 모드에서만 표시 */}
               {API_ENABLED && (

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User, UserRole } from '../types';
 import { mockUsers } from '../data/mockData';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -12,6 +12,9 @@ import {
 
 interface AuthContextType {
   currentUser: User | null;
+  /** 관리자가 다른 역할로 보기 위한 임시 사용자 */
+  viewAsUser: User | null;
+  setViewAsUser: (user: User | null) => void;
   /** 데모 모드 로그인 (역할 선택) */
   login: (role: UserRole, userId: string) => void;
   /** API/Supabase 모드 로그인 (이메일 + 비밀번호) */
@@ -23,6 +26,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('ams_auth_user', null);
+  const [viewAsUser, setViewAsUser] = useState<User | null>(null);
 
   // ── 앱 시작 시: 기존 세션 복원 ──────────────────────────────────────────
   useEffect(() => {
@@ -111,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, loginWithAPI, logout }}>
+    <AuthContext.Provider value={{ currentUser, viewAsUser, setViewAsUser, login, loginWithAPI, logout }}>
       {children}
     </AuthContext.Provider>
   );
