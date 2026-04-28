@@ -30,12 +30,21 @@ async function fetchBomналMonth(year: number, month: number): Promise<Bomна
   const nm = month === 11 ? 1 : month + 2;
   const end = `${ny}-${String(nm).padStart(2,'0')}-01`;
 
-  const params = `board_code=${BOMNAL_BOARD}&start=${start}&end=${end}`;
+  const qs = `start=${start}&end=${end}&board=${BOMNAL_BOARD}`;
 
-  // 1차: allorigins GET 프록시 (GET 파라미터로 전달)
+  // ① Cloudflare Pages Function (프로덕션 — CORS 우회 확실)
+  try {
+    const res = await fetchWithTimeout(`/api/bomnal?${qs}`, { method: 'GET' }, 10000);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+  } catch { /* 로컬 개발 환경에서는 없음 → 다음 시도 */ }
+
+  // ② allorigins.win GET 프록시 (로컬 개발 폴백)
   try {
     const targetUrl = encodeURIComponent(
-      `https://www.bomnal.net/ajax/calendar_data.cm?${params}`
+      `https://www.bomnal.net/ajax/calendar_data.cm?board_code=${BOMNAL_BOARD}&start=${start}&end=${end}`
     );
     const res = await fetchWithTimeout(
       `https://api.allorigins.win/raw?url=${targetUrl}`,
@@ -44,19 +53,19 @@ async function fetchBomналMonth(year: number, month: number): Promise<Bomна
     );
     if (res.ok) {
       const text = await res.text();
-      const data = JSON.parse(text);
+      const data = JSON.parse(text.trim() || '[]');
       if (Array.isArray(data)) return data;
     }
   } catch { /* 다음 프록시 시도 */ }
 
-  // 2차: corsproxy.io POST 프록시
+  // ③ corsproxy.io POST 프록시
   try {
     const res = await fetchWithTimeout(
       `https://corsproxy.io/?url=${encodeURIComponent('https://www.bomnal.net/ajax/calendar_data.cm')}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params,
+        body: `board_code=${BOMNAL_BOARD}&start=${start}&end=${end}`,
       },
       10000,
     );
@@ -64,20 +73,6 @@ async function fetchBomналMonth(year: number, month: number): Promise<Bomна
       const data = await res.json();
       if (Array.isArray(data)) return data;
     }
-  } catch { /* 무시 */ }
-
-  // 3차: 직접 요청 (CORS 허용 환경 대비)
-  try {
-    const res = await fetchWithTimeout(
-      'https://www.bomnal.net/ajax/calendar_data.cm',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params,
-      },
-      8000,
-    );
-    if (res.ok) return await res.json();
   } catch { /* 무시 */ }
 
   return [];
