@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 export default function SetPasswordPage() {
-  const { setIsPasswordRecovery } = useAuth();
+  const navigate = useNavigate();
+  const [ready,   setReady]   = useState(false);   // 세션 확인 완료 여부
   const [pw,      setPw]      = useState('');
   const [pw2,     setPw2]     = useState('');
   const [showPw,  setShowPw]  = useState(false);
@@ -11,11 +12,34 @@ export default function SetPasswordPage() {
   const [error,   setError]   = useState('');
   const [done,    setDone]    = useState(false);
 
+  // 유효한 복구 세션인지 확인
+  useEffect(() => {
+    const flag = sessionStorage.getItem('ams_pw_recovery');
+    if (!flag) {
+      // 복구 플래그 없으면 로그인으로
+      navigate('/', { replace: true });
+      return;
+    }
+
+    // setSession이 비동기이므로 잠시 대기 후 세션 확인
+    const check = async () => {
+      await new Promise(r => setTimeout(r, 800));
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        sessionStorage.removeItem('ams_pw_recovery');
+        navigate('/', { replace: true });
+      } else {
+        setReady(true);
+      }
+    };
+    check();
+  }, [navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (pw.length < 6)  { setError('비밀번호는 6자 이상이어야 합니다'); return; }
-    if (pw !== pw2)      { setError('비밀번호가 일치하지 않습니다'); return; }
+    if (pw.length < 6) { setError('비밀번호는 6자 이상이어야 합니다'); return; }
+    if (pw !== pw2)    { setError('비밀번호가 일치하지 않습니다'); return; }
 
     setLoading(true);
     const { error: updateError } = await supabase.auth.updateUser({ password: pw });
@@ -24,20 +48,25 @@ export default function SetPasswordPage() {
     if (updateError) {
       setError(updateError.message);
     } else {
+      sessionStorage.removeItem('ams_pw_recovery');
       setDone(true);
-      // 2초 후 로그인 화면으로
-      setTimeout(() => {
-        setIsPasswordRecovery(false);
-        // 세션 정리
-        supabase.auth.signOut().catch(() => {});
-      }, 2000);
+      await supabase.auth.signOut().catch(() => {});
+      setTimeout(() => navigate('/', { replace: true }), 2000);
     }
   };
+
+  // 세션 확인 전 로딩
+  if (!ready && !done) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-400 text-sm">확인 중...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* 헤더 */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
             <span className="text-3xl">🏫</span>
@@ -60,30 +89,22 @@ export default function SetPasswordPage() {
                 <div className="relative">
                   <input
                     type={showPw ? 'text' : 'password'}
-                    value={pw}
-                    onChange={e => setPw(e.target.value)}
-                    required autoFocus
-                    placeholder="6자 이상 입력"
+                    value={pw} onChange={e => setPw(e.target.value)}
+                    required autoFocus placeholder="6자 이상"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-16"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw(p => !p)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"
-                  >
+                  <button type="button" onClick={() => setShowPw(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
                     {showPw ? '숨기기' : '보기'}
                   </button>
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호 확인</label>
                 <input
                   type={showPw ? 'text' : 'password'}
-                  value={pw2}
-                  onChange={e => setPw2(e.target.value)}
-                  required
-                  placeholder="비밀번호 재입력"
+                  value={pw2} onChange={e => setPw2(e.target.value)}
+                  required placeholder="비밀번호 재입력"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -92,11 +113,8 @@ export default function SetPasswordPage() {
                 <p className="text-red-600 text-xs bg-red-50 px-3 py-2 rounded-lg">{error}</p>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
+              <button type="submit" disabled={loading}
+                className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:opacity-50">
                 {loading ? '설정 중...' : '비밀번호 설정하기'}
               </button>
             </form>

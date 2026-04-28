@@ -1,7 +1,5 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { useAuth } from './context/AuthContext';
-
 import LoginPage from './pages/LoginPage';
 import SetPasswordPage from './pages/SetPasswordPage';
 import Layout from './components/Layout';
@@ -30,14 +28,12 @@ import StaffFinancePage from './pages/staff/StaffFinancePage';
 // Parent
 import ParentDashboardPage from './pages/parent/ParentDashboardPage';
 
-/** 비밀번호 복구 흐름 감지 후 SetPasswordPage 표시 */
 function AppRoutes() {
-  const { isPasswordRecovery } = useAuth();
-  if (isPasswordRecovery) return <SetPasswordPage />;
-
   return (
     <Routes>
           <Route path="/" element={<LoginPage />} />
+          {/* 비밀번호 재설정 링크 전용 페이지 */}
+          <Route path="/set-password" element={<SetPasswordPage />} />
 
           {/* Admin */}
           <Route path="/admin" element={<Layout />}>
