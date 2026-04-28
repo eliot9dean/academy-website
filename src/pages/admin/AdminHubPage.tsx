@@ -95,6 +95,7 @@ export default function AdminHubPage() {
   const [createSendEmail, setCreateSendEmail] = useState(true);
   const [creating,        setCreating]        = useState(false);
   const [createMsg,       setCreateMsg]       = useState<{ ok: boolean; text: string } | null>(null);
+  const [createdEmail,    setCreatedEmail]    = useState<string | null>(null); // 방금 추가된 이메일
 
   const users = selectedRole ? allUsers.filter(u => u.role === selectedRole) : [];
   const selectedConfig = roleConfig.find(r => r.role === selectedRole);
@@ -166,18 +167,19 @@ export default function AdminHubPage() {
   // ── 핸들러: 사용자 추가 ───────────────────────────────────────────────────
   const closeCreateModal = () => {
     setShowCreate(false); setCreateName(''); setCreateEmail('');
-    setCreateRole('teacher'); setCreateMsg(null);
+    setCreateRole('teacher'); setCreateMsg(null); setCreatedEmail(null);
   };
   const handleCreate = async () => {
     if (!createName.trim() || !createEmail.trim()) return;
     setCreating(true); setCreateMsg(null);
     const newAppId = nextAppId(allUsers);
-    const res = await supabaseAdminCreateUser(createEmail.trim(), createName.trim(), createRole, newAppId, createSendEmail);
+    const email = createEmail.trim();
+    const res = await supabaseAdminCreateUser(email, createName.trim(), createRole, newAppId, createSendEmail);
     setCreating(false);
     if (res.ok) {
-      setAllUsers(prev => [...prev, { id: newAppId, name: createName.trim(), email: createEmail.trim(), role: createRole }]);
-      setCreateMsg({ ok: true, text: `추가 완료${createSendEmail ? ' · 비밀번호 설정 이메일 발송됨' : ''}` });
-      setTimeout(closeCreateModal, 2000);
+      setAllUsers(prev => [...prev, { id: newAppId, name: createName.trim(), email, role: createRole }]);
+      setCreatedEmail(email);
+      setCreateMsg({ ok: true, text: `추가 완료${createSendEmail ? ' · 이메일 발송됨' : ''}` });
     } else {
       setCreateMsg({ ok: false, text: res.error ?? '추가 실패' });
     }
@@ -543,16 +545,29 @@ export default function AdminHubPage() {
               </p>
             )}
 
-            <div className="flex gap-2 mt-5">
+            {/* 추가 완료 후: 이메일 재발송 버튼 표시 */}
+            {createdEmail && (
+              <button
+                onClick={() => handleSendEmail(createdEmail)}
+                disabled={sendingEmail === createdEmail}
+                className="w-full mt-3 py-2 rounded-xl border border-blue-200 text-blue-600 text-xs font-medium hover:bg-blue-50 disabled:opacity-40 transition-colors"
+              >
+                {sentEmail === createdEmail ? '✅ 이메일 발송됨' : sendingEmail === createdEmail ? '⏳ 발송 중...' : '📧 비밀번호 설정 이메일 재발송'}
+              </button>
+            )}
+
+            <div className="flex gap-2 mt-3">
               <button onClick={closeCreateModal}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
-                취소
+                {createdEmail ? '닫기' : '취소'}
               </button>
-              <button onClick={handleCreate}
-                disabled={creating || !createName.trim() || !createEmail.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-40">
-                {creating ? '추가 중...' : '추가하기'}
-              </button>
+              {!createdEmail && (
+                <button onClick={handleCreate}
+                  disabled={creating || !createName.trim() || !createEmail.trim()}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-40">
+                  {creating ? '추가 중...' : '추가하기'}
+                </button>
+              )}
             </div>
           </div>
         </div>

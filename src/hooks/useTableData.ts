@@ -277,8 +277,8 @@ export function useTableData<T extends Row = Row>(
       const current = (db[tableId] ?? []) as T[];
       const newRows = typeof updater === 'function' ? updater(current) : updater;
       writeDB({ ...db, [tableId]: newRows });
-      // API 모드: 서버에도 비동기 저장 (best-effort)
-      if (API_ENABLED) {
+      // API / Supabase 모드: 서버에도 비동기 저장 (best-effort)
+      if (API_ENABLED || SUPABASE_ENABLED) {
         saveTableToAPI(tableId, newRows).catch(() => {});
       }
     },
