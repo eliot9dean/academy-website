@@ -44,41 +44,43 @@ async function fetchWithTimeout(url: string, init: RequestInit, ms = 10000): Pro
   }
 }
 
-async function fetchBomналMonth(year: number, month: number): Promise<BomналEvent[]> {
+/**
+ * 봄날 월별 이벤트 조회.
+ * 모든 프록시가 실패하면 null 반환 (빈 배열과 구분 → 캐시 보존 목적).
+ */
+async function fetchBomналMonth(year: number, month: number): Promise<BomналEvent[] | null> {
   const start = `${year}-${String(month + 1).padStart(2,'0')}-01`;
   const ny = month === 11 ? year + 1 : year;
   const nm = month === 11 ? 1 : month + 2;
   const end = `${ny}-${String(nm).padStart(2,'0')}-01`;
-
   const qs = `start=${start}&end=${end}&board=${BOMNAL_BOARD}`;
 
-  // ① Cloudflare Pages Function (프로덕션 — CORS 우회 확실)
+  // ① Cloudflare Pages Function
   try {
-    const res = await fetchWithTimeout(`/api/bomnal?${qs}`, { method: 'GET' }, 10000);
+    const res = await fetchWithTimeout(`/api/bomnal?${qs}`, { method: 'GET' }, 12000);
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data)) return data;
+      if (Array.isArray(data)) return data;   // 성공 (빈 배열도 유효)
     }
-  } catch { /* 로컬 개발 환경에서는 없음 → 다음 시도 */ }
+  } catch { /* 로컬 개발 환경 → 폴백 */ }
 
-  // ② allorigins.win GET 프록시 (로컬 개발 폴백)
+  // ② allorigins GET 프록시
   try {
     const targetUrl = encodeURIComponent(
       `https://www.bomnal.net/ajax/calendar_data.cm?board_code=${BOMNAL_BOARD}&start=${start}&end=${end}`
     );
     const res = await fetchWithTimeout(
       `https://api.allorigins.win/raw?url=${targetUrl}`,
-      { method: 'GET' },
-      10000,
+      { method: 'GET' }, 12000,
     );
     if (res.ok) {
       const text = await res.text();
       const data = JSON.parse(text.trim() || '[]');
       if (Array.isArray(data)) return data;
     }
-  } catch { /* 다음 프록시 시도 */ }
+  } catch { /* 다음 시도 */ }
 
-  // ③ corsproxy.io POST 프록시
+  // ③ corsproxy.io POST
   try {
     const res = await fetchWithTimeout(
       `https://corsproxy.io/?url=${encodeURIComponent('https://www.bomnal.net/ajax/calendar_data.cm')}`,
@@ -86,8 +88,7 @@ async function fetchBomналMonth(year: number, month: number): Promise<Bomна
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `board_code=${BOMNAL_BOARD}&start=${start}&end=${end}`,
-      },
-      10000,
+      }, 12000,
     );
     if (res.ok) {
       const data = await res.json();
@@ -95,7 +96,19 @@ async function fetchBomналMonth(year: number, month: number): Promise<Bomна
     }
   } catch { /* 무시 */ }
 
-  return [];
+  return null; // 모든 프록시 실패 → null (캐시 보존)
+}
+
+/** 봄날 이벤트 상세 조회 (URL 필드 포함) */
+async function fetchBomналDetail(id: string): Promise<Record<string, unknown>> {
+  try {
+    const res = await fetchWithTimeout(
+      `/api/bomnal?idx=${id}&board=${BOMNAL_BOARD}`,
+      { method: 'GET' }, 8000,
+    );
+    if (res.ok) return await res.json();
+  } catch { /* 무시 */ }
+  return {};
 }
 
 const DAYS = ['일','월','화','수','목','금','토'];
@@ -160,7 +173,10 @@ export default function AdminSchedulePage() {
       return cached ? (JSON.parse(cached) as BomналEvent[]) : [];
     } catch { return []; }
   });
+  const [bomналSyncing, setBomналSyncing] = useState(false);
   const [rssRefreshKey, setRssRefreshKey] = useState(0);
+  // 이벤트별 상세 URL 캐시 { [id]: url }
+  const [bomналUrls, setBomналUrls] = useState<Record<string, string>>({});
 
   // 동기화 시간: 10시, 14시, 18시, 22시
   const SYNC_HOURS = [10, 14, 18, 22];
@@ -172,15 +188,41 @@ export default function AdminSchedulePage() {
       if (cached) setBomналEvents(JSON.parse(cached) as BomналEvent[]);
     } catch { /* 무시 */ }
 
+    setBomналSyncing(true);
     try {
       const data = await fetchBomналMonth(year, month);
+      if (data === null) return; // 모든 프록시 실패 → 캐시 유지
       const filtered = data.filter(isHakwonNotice);
       setBomналEvents(filtered);
-      // 캐시에 저장 (다음 새로고침 시 즉시 표시용)
+      // 캐시 저장 (빈 달도 저장하여 "이벤트 없음" 상태 캐시)
       try { localStorage.setItem(`bomnal_${year}_${month}`, JSON.stringify(filtered)); } catch { /* 무시 */ }
-    } catch { /* 무시 */ }
+    } finally {
+      setBomналSyncing(false);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, bomналCacheKey]);
+
+  // 이벤트 상세 URL 일괄 조회 (표시된 이벤트들의 URL 가져오기)
+  useEffect(() => {
+    if (bomналEvents.length === 0) return;
+    const missing = bomналEvents.filter(e => !e.url && !bomналUrls[e.id]);
+    if (missing.length === 0) return;
+
+    missing.forEach(async ev => {
+      const detail = await fetchBomналDetail(ev.id);
+      // 상세에서 url 추출 (다양한 필드명 체크)
+      const detailUrl = (
+        detail.url || detail.link || detail.boardUrl || detail.pageUrl ||
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (detail.extendedProps as any)?.url ||
+        Object.values(detail).find((v): v is string => typeof v === 'string' && v.startsWith('http'))
+      ) as string ?? '';
+      if (detailUrl) {
+        setBomналUrls(prev => ({ ...prev, [ev.id]: detailUrl }));
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bomналEvents]);
 
   // syncBomnal의 최신 버전을 ref로 유지 (스케줄러 클로저 문제 방지)
   const syncRef = useRef(syncBomnal);
@@ -334,7 +376,12 @@ export default function AdminSchedulePage() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-4">
             <button onClick={prevMonth} className="btn-ghost px-2 py-1 text-sm">◀</button>
-            <h2 className="font-bold text-sm" style={{ color: '#0F172A' }}>{year}년 {month+1}월</h2>
+            <h2 className="font-bold text-sm flex items-center gap-2" style={{ color: '#0F172A' }}>
+              {year}년 {month+1}월
+              {bomналSyncing && (
+                <span className="text-xs font-normal animate-pulse" style={{ color: '#94A3B8' }}>봄날 동기화 중…</span>
+              )}
+            </h2>
             <button onClick={nextMonth} className="btn-ghost px-2 py-1 text-sm">▶</button>
           </div>
 
@@ -424,16 +471,18 @@ export default function AdminSchedulePage() {
                     ? new Date(new Date(ev.end).getTime() - 86400000).toISOString().slice(0,10)
                     : ev.start;
                   const isSingleDay = endDisplay === ev.start;
-                  // imweb이 url 필드명을 다양하게 사용할 수 있으므로 여러 후보 체크
-                  // 마지막 catch-all: 모든 최상위 문자열 필드 중 http로 시작하는 첫 번째 값
+                  // URL: 목록 API 필드 → 상세 조회 결과 → catch-all 순으로 확인
                   const eventUrl: string = (() => {
+                    // 1순위: 상세 조회로 가져온 URL
+                    if (bomналUrls[ev.id]) return bomналUrls[ev.id];
+                    // 2순위: 목록 API 필드들
                     const candidates = [
                       ev.url, ev.link, ev.boardUrl, ev.pageUrl, ev.href,
                       ev.extendedProps?.url, ev.extendedProps?.link,
                     ];
                     const explicit = candidates.find(v => typeof v === 'string' && v.startsWith('http'));
                     if (explicit) return explicit as string;
-                    // catch-all: 어떤 필드든 http로 시작하면 URL로 간주
+                    // 3순위: 모든 string 필드 중 http 시작값
                     return Object.values(ev).find(
                       (v): v is string => typeof v === 'string' && v.startsWith('http')
                     ) ?? '';
