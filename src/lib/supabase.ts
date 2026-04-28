@@ -206,6 +206,21 @@ export async function supabaseAdminCreateUser(
     options: { data: { name, role } },
   });
 
+  // 이미 가입된 계정인 경우 → ams_tables만 업데이트하고 이메일 발송
+  const alreadyExists =
+    error?.message?.toLowerCase().includes('already registered') ||
+    error?.message?.toLowerCase().includes('already been registered') ||
+    error?.message?.toLowerCase().includes('user already');
+
+  if (alreadyExists) {
+    if (sendEmail) {
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/',
+      });
+    }
+    return { ok: true }; // 이메일만 발송, ams_tables 추가는 호출부에서 처리
+  }
+
   if (error || !data.user) {
     return { ok: false, error: error?.message ?? '사용자 생성 실패' };
   }

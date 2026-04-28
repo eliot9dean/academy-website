@@ -8,6 +8,7 @@ import {
   supabaseAdminRejectUser,
   supabaseAdminCreateUser,
   supabaseSendPasswordEmail,
+  supabaseSaveTable,
 } from '../../lib/supabase';
 import type { User, UserRole } from '../../types';
 
@@ -140,17 +141,31 @@ export default function AdminHubPage() {
     if (!approveTarget) return;
     setApproving(true); setApproveMsg(null);
     const newAppId = nextAppId(allUsers);
+
+    // 1. user_profiles 업데이트 (RPC)
     const res = await supabaseAdminApproveUser(approveTarget.supabaseId, approveRole, approveTarget.name, newAppId);
-    setApproving(false);
-    if (res.ok) {
-      // 로컬 DB 동기화
-      setPendingUsers(prev => prev.filter(p => p.supabaseId !== approveTarget.supabaseId));
-      setAllUsers(prev => [...prev, { id: newAppId, name: approveTarget.name, email: approveTarget.email, role: approveRole }]);
-      setApproveMsg({ ok: true, text: '승인되었습니다 ✅' });
-      setTimeout(() => { setApproveTarget(null); setApproveMsg(null); }, 1500);
-    } else {
+    if (!res.ok) {
+      setApproving(false);
       setApproveMsg({ ok: false, text: res.error ?? '승인 실패' });
+      return;
     }
+
+    // 2. 새 users 배열 / 새 pending 배열 계산
+    const newUser = { id: newAppId, name: approveTarget.name, email: approveTarget.email, role: approveRole };
+    const newUsers   = [...allUsers,     newUser];
+    const newPending = pendingUsers.filter(p => p.supabaseId !== approveTarget.supabaseId);
+
+    // 3. 로컬 DB + Supabase 직접 저장 (hook 저장 실패 대비 이중 저장)
+    setAllUsers(newUsers);
+    setPendingUsers(newPending);
+    await Promise.all([
+      supabaseSaveTable('users',         newUsers),
+      supabaseSaveTable('pending_users', newPending),
+    ]).catch(() => {});
+
+    setApproving(false);
+    setApproveMsg({ ok: true, text: '승인되었습니다 ✅' });
+    setTimeout(() => { setApproveTarget(null); setApproveMsg(null); }, 1500);
   };
 
   // ── 핸들러: 거절 ──────────────────────────────────────────────────────────
@@ -158,7 +173,9 @@ export default function AdminHubPage() {
     if (!confirm(`"${user.name}" 님의 가입 신청을 거절하시겠습니까?`)) return;
     const res = await supabaseAdminRejectUser(user.supabaseId);
     if (res.ok) {
-      setPendingUsers(prev => prev.filter(p => p.supabaseId !== user.supabaseId));
+      const newPending = pendingUsers.filter(p => p.supabaseId !== user.supabaseId);
+      setPendingUsers(newPending);
+      await supabaseSaveTable('pending_users', newPending).catch(() => {});
     } else {
       alert('거절 실패: ' + res.error);
     }
@@ -177,7 +194,11 @@ export default function AdminHubPage() {
     const res = await supabaseAdminCreateUser(email, createName.trim(), createRole, newAppId, createSendEmail);
     setCreating(false);
     if (res.ok) {
-      setAllUsers(prev => [...prev, { id: newAppId, name: createName.trim(), email, role: createRole }]);
+      const newUser = { id: newAppId, name: createName.trim(), email, role: createRole };
+      const newUsers = [...allUsers, newUser];
+      setAllUsers(newUsers);
+      // Supabase에도 직접 저장 (hook 저장 실패 대비)
+      await supabaseSaveTable('users', newUsers).catch(() => {});
       setCreatedEmail(email);
       setCreateMsg({ ok: true, text: `추가 완료${createSendEmail ? ' · 이메일 발송됨' : ''}` });
     } else {
