@@ -31,7 +31,8 @@ const CARD_PALETTES = [
 ];
 
 export default function TeacherClassesPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, viewAsUser } = useAuth();
+  const effectiveUser = viewAsUser ?? currentUser;
   const navigate = useNavigate();
   const [colorPickerFor, setColorPickerFor] = useState<string | null>(null);
   const [cardColors, setCardColors] = useLocalStorage<Record<string, number>>('ams_class_card_colors', {});
@@ -43,7 +44,7 @@ export default function TeacherClassesPage() {
   const [students]   = useTableData<Student>('students');
   const [attendance] = useTableData<AttendanceRecord>('attendance');
 
-  const myClasses = classes.filter(c => c.teacherId === currentUser?.id);
+  const myClasses = classes.filter(c => c.teacherId === effectiveUser?.id);
 
   return (
     <div onClick={() => setColorPickerFor(null)}>

@@ -58,11 +58,12 @@ function CellArea({ value, onChange, placeholder, bg, border }:
 
 // ── 메인 ─────────────────────────────────────────────────────────
 export default function TeacherLessonLogPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, viewAsUser } = useAuth();
+  const effectiveUser = viewAsUser ?? currentUser;
   const [dbClasses]                 = useTableData<ClassInfo>('classes');
   const [dbProgress, setDbProgress] = useTableData<DailyProgress>('dailyProgress');
 
-  const myClasses  = useMemo(() => dbClasses.filter(c => c.teacherId === currentUser?.id), [dbClasses, currentUser]);
+  const myClasses  = useMemo(() => dbClasses.filter(c => c.teacherId === effectiveUser?.id), [dbClasses, effectiveUser]);
   const myClassIds = useMemo(() => new Set(myClasses.map(c => c.id)), [myClasses]);
 
   // ── 테이블 필터·정렬 ──

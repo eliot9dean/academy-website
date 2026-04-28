@@ -15,6 +15,14 @@ export const supabase = createClient(
   SUPABASE_ANON_KEY || 'placeholder',
 );
 
+// ── 프로필 Row → User 변환 (app_user_id를 id로 사용) ─────────────────────────
+function profileToUser(profile: Row): User {
+  return {
+    ...(profile as User),
+    id: (profile.app_user_id as string) || (profile.id as string),
+  };
+}
+
 // ── 로그인 ────────────────────────────────────────────────────────────────────
 export async function supabaseLogin(
   email: string,
@@ -32,7 +40,7 @@ export async function supabaseLogin(
     .eq('id', data.user.id)
     .single();
 
-  return { ok: true, user: profile as User ?? undefined };
+  return { ok: true, user: profile ? profileToUser(profile) : undefined };
 }
 
 // ── 로그아웃 ──────────────────────────────────────────────────────────────────
@@ -51,7 +59,7 @@ export async function supabaseGetCurrentUser(): Promise<User | null> {
     .eq('id', session.user.id)
     .single();
 
-  return (profile as User) ?? null;
+  return profile ? profileToUser(profile) : null;
 }
 
 // ── 전체 데이터 조회 ──────────────────────────────────────────────────────────

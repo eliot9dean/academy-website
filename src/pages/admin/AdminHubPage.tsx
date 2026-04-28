@@ -39,7 +39,13 @@ export default function AdminHubPage() {
         .select('*')
         .eq('role', selectedRole)
         .then(({ data }) => {
-          setUsers((data as User[]) ?? []);
+          // app_user_id를 id로 매핑 (수업 데이터의 teacherId 등과 일치시키기 위해)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mapped = (data ?? []).map((p: any) => ({
+            ...(p as User),
+            id: (p.app_user_id as string) || (p.id as string),
+          }));
+          setUsers(mapped);
           setLoading(false);
         });
     } else {
