@@ -151,19 +151,36 @@ export default function AdminSchedulePage() {
   const [consultStudentName, setConsultStudentName] = useState('');
 
   // ── 봄날 캘린더 자동 동기화 ─────────────────────────────────────────────
-  const [bomналEvents, setBomналEvents] = useState<BomналEvent[]>([]);
+  const bomналCacheKey = `bomnal_${year}_${month}`;
+
+  // 캐시에서 즉시 복원 (새로고침 시 이전 데이터 바로 표시)
+  const [bomналEvents, setBomналEvents] = useState<BomналEvent[]>(() => {
+    try {
+      const cached = localStorage.getItem(`bomnal_${TODAY_YEAR}_${TODAY_MONTH}`);
+      return cached ? (JSON.parse(cached) as BomналEvent[]) : [];
+    } catch { return []; }
+  });
   const [rssRefreshKey, setRssRefreshKey] = useState(0);
 
   // 동기화 시간: 10시, 14시, 18시, 22시
   const SYNC_HOURS = [10, 14, 18, 22];
 
   const syncBomnal = useCallback(async () => {
+    // 월이 바뀌면 해당 월 캐시 먼저 복원
+    try {
+      const cached = localStorage.getItem(`bomnal_${year}_${month}`);
+      if (cached) setBomналEvents(JSON.parse(cached) as BomналEvent[]);
+    } catch { /* 무시 */ }
+
     try {
       const data = await fetchBomналMonth(year, month);
-      // 학원공지 카테고리만 필터링
-      setBomналEvents(data.filter(isHakwonNotice));
+      const filtered = data.filter(isHakwonNotice);
+      setBomналEvents(filtered);
+      // 캐시에 저장 (다음 새로고침 시 즉시 표시용)
+      try { localStorage.setItem(`bomnal_${year}_${month}`, JSON.stringify(filtered)); } catch { /* 무시 */ }
     } catch { /* 무시 */ }
-  }, [year, month]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month, bomналCacheKey]);
 
   // syncBomnal의 최신 버전을 ref로 유지 (스케줄러 클로저 문제 방지)
   const syncRef = useRef(syncBomnal);
@@ -213,6 +230,16 @@ export default function AdminSchedulePage() {
 
   const prevMonth = () => { if (month === 0) { setYear(y => y-1); setMonth(11); } else setMonth(m => m-1); };
   const nextMonth = () => { if (month === 11) { setYear(y => y+1); setMonth(0); } else setMonth(m => m+1); };
+
+  // ESC 키로 모달 닫기
+  useEffect(() => {
+    if (!showModal) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setShowModal(false); setConsultStudentName(''); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showModal]);
 
   const handleSave = () => {
     const eventType = (form.type as EventType) ?? 'consultation';
@@ -398,9 +425,19 @@ export default function AdminSchedulePage() {
                     : ev.start;
                   const isSingleDay = endDisplay === ev.start;
                   // imweb이 url 필드명을 다양하게 사용할 수 있으므로 여러 후보 체크
-                  const eventUrl: string =
-                    ev.url || ev.link || ev.boardUrl || ev.pageUrl ||
-                    ev.extendedProps?.url || ev.extendedProps?.link || '';
+                  // 마지막 catch-all: 모든 최상위 문자열 필드 중 http로 시작하는 첫 번째 값
+                  const eventUrl: string = (() => {
+                    const candidates = [
+                      ev.url, ev.link, ev.boardUrl, ev.pageUrl, ev.href,
+                      ev.extendedProps?.url, ev.extendedProps?.link,
+                    ];
+                    const explicit = candidates.find(v => typeof v === 'string' && v.startsWith('http'));
+                    if (explicit) return explicit as string;
+                    // catch-all: 어떤 필드든 http로 시작하면 URL로 간주
+                    return Object.values(ev).find(
+                      (v): v is string => typeof v === 'string' && v.startsWith('http')
+                    ) ?? '';
+                  })();
                   return (
                     <div key={`b-${ev.id}`} className="rounded-xl p-3" style={{ background: '#FFF5F5', border: '1px solid #FECACA' }}>
                       <div className="flex items-center gap-1.5 mb-1.5">
