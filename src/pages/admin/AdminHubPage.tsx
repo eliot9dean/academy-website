@@ -7,6 +7,7 @@ import {
   supabaseAdminApproveUser,
   supabaseAdminRejectUser,
   supabaseAdminCreateUser,
+  supabaseSendPasswordEmail,
 } from '../../lib/supabase';
 import type { User, UserRole } from '../../types';
 
@@ -59,6 +60,18 @@ export default function AdminHubPage() {
 
   // ── 역할별 이동 ────────────────────────────────────────────────────────────
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+
+  // ── 이메일 재발송 ─────────────────────────────────────────────────────────
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null); // 현재 발송 중인 email
+  const [sentEmail,    setSentEmail]    = useState<string | null>(null); // 발송 완료된 email
+
+  const handleSendEmail = async (email: string) => {
+    setSendingEmail(email);
+    await supabaseSendPasswordEmail(email);
+    setSendingEmail(null);
+    setSentEmail(email);
+    setTimeout(() => setSentEmail(null), 3000);
+  };
 
   // ── 비밀번호 재설정 모달 ───────────────────────────────────────────────────
   const [resetTarget, setResetTarget] = useState<User | null>(null);
@@ -272,11 +285,20 @@ export default function AdminHubPage() {
                         </span>
                         <span className="text-gray-300 group-hover:text-blue-400 transition-colors text-sm">›</span>
                       </button>
+                      {/* 이메일 재발송 */}
+                      <button
+                        onClick={e => { e.stopPropagation(); handleSendEmail(user.email); }}
+                        disabled={sendingEmail === user.email}
+                        className="p-3 rounded-xl bg-gray-100 hover:bg-blue-100 hover:text-blue-600 text-gray-400 transition-colors flex-shrink-0 disabled:opacity-40"
+                        title="비밀번호 설정 이메일 재발송"
+                      >
+                        {sentEmail === user.email ? '✅' : sendingEmail === user.email ? '⏳' : '📧'}
+                      </button>
                       {/* 비밀번호 재설정 */}
                       <button
                         onClick={(e) => openResetModal(e, user)}
                         className="p-3 rounded-xl bg-gray-100 hover:bg-amber-100 hover:text-amber-600 text-gray-400 transition-colors flex-shrink-0"
-                        title="비밀번호 재설정"
+                        title="비밀번호 직접 변경"
                       >
                         🔑
                       </button>

@@ -229,6 +229,17 @@ export async function supabaseAdminCreateUser(
   return { ok: true };
 }
 
+// ── 관리자: 비밀번호 설정 이메일 재발송 ──────────────────────────────────────
+export async function supabaseSendPasswordEmail(
+  email: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/',
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 // ── 관리자: 다른 사용자 비밀번호 강제 변경 (Supabase RPC 경유) ───────────────
 export async function supabaseAdminResetPassword(
   email: string,
