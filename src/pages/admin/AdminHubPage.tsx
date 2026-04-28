@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { SUPABASE_ENABLED } from '../../config/api';
-import { supabase } from '../../lib/supabase';
-import { mockUsers } from '../../data/mockData';
+import { useTableData } from '../../hooks/useTableData';
 import type { User, UserRole } from '../../types';
 
 const roleConfig = [
@@ -23,36 +21,12 @@ const roleBadgeColor: Record<UserRole, string> = {
 export default function AdminHubPage() {
   const navigate = useNavigate();
   const { setViewAsUser } = useAuth();
+  const [allUsers] = useTableData<User>('users');  // ams_tables.users (앱 데이터 기준)
 
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  // 역할 선택 시 해당 역할 사용자 목록 로드
-  useEffect(() => {
-    if (!selectedRole) return;
-    setLoading(true);
-
-    if (SUPABASE_ENABLED) {
-      supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('role', selectedRole)
-        .then(({ data }) => {
-          // app_user_id를 id로 매핑 (수업 데이터의 teacherId 등과 일치시키기 위해)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const mapped = (data ?? []).map((p: any) => ({
-            ...(p as User),
-            id: (p.app_user_id as string) || (p.id as string),
-          }));
-          setUsers(mapped);
-          setLoading(false);
-        });
-    } else {
-      setUsers(mockUsers.filter(u => u.role === selectedRole));
-      setLoading(false);
-    }
-  }, [selectedRole]);
+  // 선택된 역할의 사용자만 필터
+  const users = selectedRole ? allUsers.filter(u => u.role === selectedRole) : [];
 
   const handleUserSelect = (user: User) => {
     const config = roleConfig.find(r => r.role === user.role)!;
@@ -97,15 +71,13 @@ export default function AdminHubPage() {
         <div className="w-full max-w-md">
           {/* 뒤로 가기 */}
           <button
-            onClick={() => { setSelectedRole(null); setUsers([]); }}
+            onClick={() => setSelectedRole(null)}
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-5 transition-colors"
           >
             ← 역할 선택으로 돌아가기
           </button>
 
-          {loading ? (
-            <div className="text-center py-12 text-gray-400">불러오는 중…</div>
-          ) : users.length === 0 ? (
+          {users.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <div className="text-4xl mb-3">{selectedConfig?.icon}</div>
               <p className="text-sm">등록된 {selectedConfig?.label} 계정이 없습니다</p>
