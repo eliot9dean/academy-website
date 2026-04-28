@@ -503,15 +503,23 @@ export default function AdminSchedulePage() {
                             {ev.description}
                           </div>
                         )}
-                        {/* URL */}
+                        {/* URL — 미리보기 후 수동 열기 */}
                         {eventUrl && (
-                          <div className="mt-1 pt-1 border-t" style={{ borderColor: '#FECACA' }}>
-                            <a href={eventUrl} target="_blank" rel="noopener noreferrer"
-                              className="text-xs underline break-all"
-                              style={{ color: '#B91C1C' }}
-                              onClick={e => e.stopPropagation()}>
-                              🔗 {eventUrl}
-                            </a>
+                          <div className="mt-1.5 pt-1.5 border-t space-y-1" style={{ borderColor: '#FECACA' }}>
+                            <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#991B1B' }}>
+                              🔗 링크
+                            </div>
+                            <div className="text-xs break-all px-2 py-1.5 rounded-lg select-all"
+                              style={{ background: '#FEE2E2', color: '#7F1D1D', wordBreak: 'break-all' }}>
+                              {eventUrl}
+                            </div>
+                            <button
+                              className="w-full text-xs font-semibold py-1 rounded-lg transition-colors"
+                              style={{ background: '#DC2626', color: '#fff' }}
+                              onClick={e => { e.stopPropagation(); window.open(eventUrl, '_blank', 'noopener,noreferrer'); }}
+                            >
+                              새 탭에서 열기 →
+                            </button>
                           </div>
                         )}
                       </div>
