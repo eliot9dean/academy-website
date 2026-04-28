@@ -106,10 +106,49 @@ export async function supabaseSignUp(
   if (data.session) {
     // 약간의 지연으로 트리거 완료 대기
     await new Promise(r => setTimeout(r, 500));
+
+    // 2-a. user_profiles 업데이트
     await supabase
       .from('user_profiles')
       .update({ name, role })
       .eq('id', data.user.id);
+
+    // 2-b. ams_tables.users 에도 추가 (앱 사용자 목록 동기화)
+    try {
+      // 현재 users 목록 조회
+      const { data: amsRow } = await supabase
+        .from('ams_tables')
+        .select('data')
+        .eq('name', 'users')
+        .single();
+
+      const currentUsers: Row[] = (amsRow?.data as Row[]) ?? [];
+
+      // 이미 같은 이메일이 있으면 스킵
+      const alreadyExists = currentUsers.some(u => u.email === email);
+      if (!alreadyExists) {
+        // 새 app_user_id 생성 (u1, u2, ... 중 최댓값 + 1)
+        const maxNum = currentUsers.reduce((max, u) => {
+          const match = String(u.id ?? '').match(/\d+$/);
+          return match ? Math.max(max, parseInt(match[0])) : max;
+        }, 0);
+        const newAppId = `u${maxNum + 1}`;
+
+        // user_profiles.app_user_id 도 업데이트
+        await supabase
+          .from('user_profiles')
+          .update({ app_user_id: newAppId })
+          .eq('id', data.user.id);
+
+        // ams_tables.users 저장
+        const newUser: Row = { id: newAppId, name, role, email };
+        await supabase
+          .from('ams_tables')
+          .upsert({ name: 'users', data: [...currentUsers, newUser] }, { onConflict: 'name' });
+      }
+    } catch {
+      // ams_tables 동기화 실패는 무시 (로그인은 정상 진행)
+    }
   }
 
   return { ok: true };
