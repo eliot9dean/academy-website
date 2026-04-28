@@ -115,6 +115,19 @@ export async function supabaseSignUp(
   return { ok: true };
 }
 
+// ── 관리자: 다른 사용자 비밀번호 강제 변경 (Supabase RPC 경유) ───────────────
+export async function supabaseAdminResetPassword(
+  email: string,
+  newPassword: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.rpc('admin_reset_password', {
+    user_email: email,
+    new_password: newPassword,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 // ── 비밀번호 변경 ─────────────────────────────────────────────────────────────
 export async function supabaseChangePassword(
   oldPassword: string,
