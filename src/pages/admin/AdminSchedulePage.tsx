@@ -1,7 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTableData } from '../../hooks/useTableData';
 import RssTicker from '../../components/RssTicker';
 import type { ScheduleEvent, ConsultationRecord } from '../../types';
+
+// ── 봄날 캘린더 이벤트 타입 ───────────────────────────────────────────────────
+interface BomналEvent {
+  id: string;
+  title: string;
+  start: string; // YYYY-MM-DD
+  end: string;   // YYYY-MM-DD (exclusive — 다음날)
+}
+
+const BOMNAL_BOARD = 'b202604282b278728a1ac3';
+const BOMNAL_PROXY = 'https://corsproxy.io/?url=https%3A%2F%2Fwww.bomnal.net%2Fajax%2Fcalendar_data.cm';
+
+async function fetchBomналMonth(year: number, month: number): Promise<BomналEvent[]> {
+  const start = `${year}-${String(month + 1).padStart(2,'0')}-01`;
+  const ny = month === 11 ? year + 1 : year;
+  const nm = month === 11 ? 1 : month + 2;
+  const end = `${ny}-${String(nm).padStart(2,'0')}-01`;
+
+  const body = new URLSearchParams({ board_code: BOMNAL_BOARD, start, end });
+
+  try {
+    // 1차: 직접 요청
+    const res = await fetch('https://www.bomnal.net/ajax/calendar_data.cm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    if (res.ok) return await res.json();
+  } catch { /* CORS 차단 → 프록시 사용 */ }
+
+  // 2차: CORS 프록시
+  const res2 = await fetch(BOMNAL_PROXY, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  if (res2.ok) return await res2.json();
+  return [];
+}
 
 const DAYS = ['일','월','화','수','목','금','토'];
 
@@ -54,6 +93,29 @@ export default function AdminSchedulePage() {
   });
   // 상담 유형일 때만 사용하는 학생명 (ScheduleEvent에 없는 별도 필드)
   const [consultStudentName, setConsultStudentName] = useState('');
+
+  // ── 봄날 캘린더 자동 동기화 ─────────────────────────────────────────────
+  const [bomналEvents, setBomналEvents] = useState<BomналEvent[]>([]);
+  const [bomналLoading, setBomналLoading] = useState(false);
+  const [bomналLastSync, setBomналLastSync] = useState<string | null>(null);
+
+  const syncBomnal = useCallback(async () => {
+    setBomналLoading(true);
+    try {
+      const data = await fetchBomналMonth(year, month);
+      setBomналEvents(data);
+      setBomналLastSync(new Date().toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' }));
+    } catch { /* 무시 */ } finally {
+      setBomналLoading(false);
+    }
+  }, [year, month]);
+
+  // 월이 바뀔 때마다 자동 갱신
+  useEffect(() => { syncBomnal(); }, [syncBomnal]);
+
+  /** 해당 날짜에 걸치는 봄날 이벤트 반환 */
+  const getBomналDay = (dateStr: string) =>
+    bomналEvents.filter(e => dateStr >= e.start && dateStr < e.end);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
@@ -122,9 +184,25 @@ export default function AdminSchedulePage() {
           <h1 className="page-title">일정 관리</h1>
           <p className="page-subtitle">상담, 회의, 행사, 외부 미팅 일정</p>
         </div>
-        <button onClick={() => { setForm({ ...form, date: selectedDate }); setShowModal(true); }} className="btn-primary">
-          + 일정 추가
-        </button>
+        <div className="flex items-center gap-2">
+          {/* 봄날 동기화 상태 */}
+          <button
+            onClick={syncBomnal}
+            disabled={bomналLoading}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50"
+            style={{ borderColor: '#FECACA', background: '#FFF5F5', color: '#DC2626' }}
+            title="봄날 캘린더 수동 동기화"
+          >
+            <span>{bomналLoading ? '⏳' : '🔄'}</span>
+            <span className="font-medium">봄날 동기화</span>
+            {bomналLastSync && !bomналLoading && (
+              <span style={{ color: '#94A3B8' }}>{bomналLastSync}</span>
+            )}
+          </button>
+          <button onClick={() => { setForm({ ...form, date: selectedDate }); setShowModal(true); }} className="btn-primary">
+            + 일정 추가
+          </button>
+        </div>
       </div>
 
       {/* 봄날 소식 RSS 롤링 배너 */}
@@ -174,10 +252,12 @@ export default function AdminSchedulePage() {
             {Array.from({ length: daysInMonth }).map((_,i) => {
               const day = i+1;
               const dateStr = formatDate(day);
-              const dayEvents = getEvents(dateStr);
-              const isSelected = selectedDate === dateStr;
-              const isToday = dateStr === TODAY_STR;
-              const dow = (firstDay + i) % 7;
+              const dayEvents   = getEvents(dateStr);
+              const bomналDay   = getBomналDay(dateStr);
+              const isSelected  = selectedDate === dateStr;
+              const isToday     = dateStr === TODAY_STR;
+              const dow         = (firstDay + i) % 7;
+              const totalCount  = dayEvents.length + bomналDay.length;
               return (
                 <button key={day} onClick={() => setSelectedDate(dateStr)}
                   className="min-h-[80px] p-2 rounded-lg text-left transition-all"
@@ -191,14 +271,22 @@ export default function AdminSchedulePage() {
                     {isToday && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded" style={{ background: '#16A34A', color: '#fff' }}>오늘</span>}
                   </div>
                   <div className="space-y-0.5">
-                    {dayEvents.slice(0,2).map(e => (
+                    {/* 봄날 이벤트 (우선 표시) */}
+                    {bomналDay.slice(0,1).map(e => (
+                      <div key={e.id} className="text-xs px-1.5 py-0.5 rounded truncate font-bold"
+                        style={{ background: '#FEE2E2', color: '#DC2626' }}>
+                        📢 {e.title}
+                      </div>
+                    ))}
+                    {/* 내부 일정 */}
+                    {dayEvents.slice(0, Math.max(0, 2 - bomналDay.length)).map(e => (
                       <div key={e.id} className="text-xs px-1.5 py-0.5 rounded truncate font-bold"
                         style={{ background: TYPE_CONFIG[e.type].bg, color: TYPE_CONFIG[e.type].text }}>
                         {e.startTime} {e.title}
                       </div>
                     ))}
-                    {dayEvents.length > 2 && (
-                      <div className="text-xs font-semibold" style={{ color: '#94A3B8' }}>+{dayEvents.length-2}개</div>
+                    {totalCount > 2 && (
+                      <div className="text-xs font-semibold" style={{ color: '#94A3B8' }}>+{totalCount-2}개</div>
                     )}
                   </div>
                 </button>
@@ -212,36 +300,55 @@ export default function AdminSchedulePage() {
           <h3 className="font-bold text-sm mb-3" style={{ color: '#0F172A' }}>
             📋 {selectedDate ? `${selectedDate.slice(5).replace('-','월 ')}일 일정` : '날짜를 선택하세요'}
           </h3>
-          {selectedEvents.length === 0 ? (
-            <div className="flex items-center gap-3 py-5 px-3 rounded-xl" style={{ background: '#F8FAFC' }}>
-              <div className="text-2xl">📭</div>
-              <p className="text-sm" style={{ color: '#CBD5E1' }}>등록된 일정이 없습니다</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {selectedEvents.sort((a,b) => a.startTime.localeCompare(b.startTime)).map(ev => {
-                const cfg = TYPE_CONFIG[ev.type];
-                const ptStyle = PERSON_TYPE_STYLE[ev.personType] ?? PERSON_TYPE_STYLE['기타'];
-                return (
-                  <div key={ev.id} className="rounded-xl p-3" style={{ background: cfg.bg, border: `1px solid ${cfg.dot}33` }}>
-                    <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+          {(() => {
+            const bomналDay = getBomналDay(selectedDate);
+            const hasAny = selectedEvents.length > 0 || bomналDay.length > 0;
+            if (!hasAny) return (
+              <div className="flex items-center gap-3 py-5 px-3 rounded-xl" style={{ background: '#F8FAFC' }}>
+                <div className="text-2xl">📭</div>
+                <p className="text-sm" style={{ color: '#CBD5E1' }}>등록된 일정이 없습니다</p>
+              </div>
+            );
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {/* 봄날 공지 카드 */}
+                {bomналDay.map(ev => (
+                  <div key={`b-${ev.id}`} className="rounded-xl p-3" style={{ background: '#FFF5F5', border: '1px solid #FECACA' }}>
+                    <div className="flex items-center gap-1.5 mb-1.5">
                       <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
-                        style={{ background: '#fff', color: cfg.text }}>{cfg.label}</span>
-                      <span className="text-xs font-medium px-1.5 py-0.5 rounded-md"
-                        style={{ background: ptStyle.bg, color: ptStyle.text }}>{ev.personType}</span>
+                        style={{ background: '#FEE2E2', color: '#DC2626' }}>📢 봄날</span>
                     </div>
-                    <h4 className="font-bold text-sm mb-1.5" style={{ color: '#0F172A' }}>{ev.title}</h4>
-                    <div className="space-y-0.5 text-xs" style={{ color: cfg.text }}>
-                      <div>⏰ {format12h(ev.startTime)} ~ {format12h(ev.endTime)}</div>
-                      <div>👤 {ev.personName}</div>
-                      {ev.phone && <div>📞 {ev.phone}</div>}
-                      {ev.content && <div className="mt-1 pt-1 border-t" style={{ color: '#475569', borderColor: `${cfg.dot}22` }}>{ev.content}</div>}
+                    <h4 className="font-bold text-sm" style={{ color: '#991B1B' }}>{ev.title}</h4>
+                    <div className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+                      🗓 {ev.start}{ev.end !== ev.start && ev.end > ev.start ? ` ~ ${new Date(new Date(ev.end).getTime() - 86400000).toISOString().slice(0,10)}` : ''}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                ))}
+                {/* 내부 일정 카드 */}
+                {selectedEvents.sort((a,b) => a.startTime.localeCompare(b.startTime)).map(ev => {
+                  const cfg = TYPE_CONFIG[ev.type];
+                  const ptStyle = PERSON_TYPE_STYLE[ev.personType] ?? PERSON_TYPE_STYLE['기타'];
+                  return (
+                    <div key={ev.id} className="rounded-xl p-3" style={{ background: cfg.bg, border: `1px solid ${cfg.dot}33` }}>
+                      <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
+                          style={{ background: '#fff', color: cfg.text }}>{cfg.label}</span>
+                        <span className="text-xs font-medium px-1.5 py-0.5 rounded-md"
+                          style={{ background: ptStyle.bg, color: ptStyle.text }}>{ev.personType}</span>
+                      </div>
+                      <h4 className="font-bold text-sm mb-1.5" style={{ color: '#0F172A' }}>{ev.title}</h4>
+                      <div className="space-y-0.5 text-xs" style={{ color: cfg.text }}>
+                        <div>⏰ {format12h(ev.startTime)} ~ {format12h(ev.endTime)}</div>
+                        <div>👤 {ev.personName}</div>
+                        {ev.phone && <div>📞 {ev.phone}</div>}
+                        {ev.content && <div className="mt-1 pt-1 border-t" style={{ color: '#475569', borderColor: `${cfg.dot}22` }}>{ev.content}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
