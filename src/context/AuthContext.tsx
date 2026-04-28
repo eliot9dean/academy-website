@@ -7,7 +7,7 @@ import {
   setApiToken, clearApiToken, syncFromAPI, resetAPISync, getApiToken,
 } from '../hooks/useTableData';
 import {
-  supabaseLogin, supabaseLogout, supabaseGetCurrentUser,
+  supabaseLogin, supabaseLogout, supabaseGetCurrentUser, supabase,
 } from '../lib/supabase';
 
 interface AuthContextType {
@@ -15,6 +15,9 @@ interface AuthContextType {
   /** 관리자가 다른 역할로 보기 위한 임시 사용자 */
   viewAsUser: User | null;
   setViewAsUser: (user: User | null) => void;
+  /** 비밀번호 재설정 링크로 접근한 경우 true */
+  isPasswordRecovery: boolean;
+  setIsPasswordRecovery: (v: boolean) => void;
   /** 데모 모드 로그인 (역할 선택) */
   login: (role: UserRole, userId: string) => void;
   /** API/Supabase 모드 로그인 (이메일 + 비밀번호) */
@@ -27,17 +30,30 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('ams_auth_user', null);
   const [viewAsUser, setViewAsUser] = useState<User | null>(null);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
-  // ── 앱 시작 시: 기존 세션 복원 ──────────────────────────────────────────
+  // ── 앱 시작 시: 기존 세션 복원 + 비밀번호 복구 감지 ────────────────────
   useEffect(() => {
     if (SUPABASE_ENABLED) {
-      // Supabase 세션 복원
+      // Supabase 비밀번호 복구 이벤트 감지
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true);
+        }
+        if (event === 'USER_UPDATED') {
+          setIsPasswordRecovery(false);
+        }
+      });
+
+      // 기존 세션 복원
       supabaseGetCurrentUser().then(user => {
         if (user) {
           setCurrentUser(user);
           syncFromAPI().catch(() => {});
         }
       });
+
+      return () => subscription.unsubscribe();
     } else if (API_ENABLED && getApiToken()) {
       // PHP 토큰 복원
       syncFromAPI().catch(() => {});
@@ -115,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, viewAsUser, setViewAsUser, login, loginWithAPI, logout }}>
+    <AuthContext.Provider value={{ currentUser, viewAsUser, setViewAsUser, isPasswordRecovery, setIsPasswordRecovery, login, loginWithAPI, logout }}>
       {children}
     </AuthContext.Provider>
   );

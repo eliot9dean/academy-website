@@ -1,7 +1,9 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
 
 import LoginPage from './pages/LoginPage';
+import SetPasswordPage from './pages/SetPasswordPage';
 import Layout from './components/Layout';
 
 // Admin
@@ -28,11 +30,13 @@ import StaffFinancePage from './pages/staff/StaffFinancePage';
 // Parent
 import ParentDashboardPage from './pages/parent/ParentDashboardPage';
 
-export default function App() {
+/** 비밀번호 복구 흐름 감지 후 SetPasswordPage 표시 */
+function AppRoutes() {
+  const { isPasswordRecovery } = useAuth();
+  if (isPasswordRecovery) return <SetPasswordPage />;
+
   return (
-    <AuthProvider>
-      <HashRouter>
-        <Routes>
+    <Routes>
           <Route path="/" element={<LoginPage />} />
 
           {/* Admin */}
@@ -73,6 +77,14 @@ export default function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <HashRouter>
+        <AppRoutes />
       </HashRouter>
     </AuthProvider>
   );
