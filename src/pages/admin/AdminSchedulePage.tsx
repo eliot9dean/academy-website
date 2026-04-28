@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTableData } from '../../hooks/useTableData';
+import RssTicker from '../../components/RssTicker';
 import type { ScheduleEvent, ConsultationRecord } from '../../types';
 
 const DAYS = ['일','월','화','수','목','금','토'];
@@ -125,6 +126,9 @@ export default function AdminSchedulePage() {
           + 일정 추가
         </button>
       </div>
+
+      {/* 봄날 소식 RSS 롤링 배너 */}
+      <RssTicker />
 
       {/* Filter buttons + Legend */}
       <div className="flex gap-2 mb-4 flex-wrap items-center">
