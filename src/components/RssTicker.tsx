@@ -6,18 +6,23 @@ interface RssItem {
   pubDate: string;
 }
 
+interface Props {
+  refreshKey?: number; // 값이 바뀌면 RSS 재요청
+}
+
 const RSS_URL  = 'https://www.bomnal.net/rss';
 const API_URL  = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}&count=10`;
 const SPEED_PX = 60; // 초당 픽셀 (클수록 빠름)
 
-export default function RssTicker() {
+export default function RssTicker({ refreshKey = 0 }: Props) {
   const [items, setItems] = useState<RssItem[]>([]);
   const [error, setError] = useState(false);
   const trackRef  = useRef<HTMLDivElement>(null);
   const [duration, setDuration] = useState(30);
 
-  // RSS 가져오기
+  // RSS 가져오기 (refreshKey 변경 시 재요청)
   useEffect(() => {
+    setError(false);
     fetch(API_URL)
       .then(r => r.json())
       .then(data => {
@@ -28,7 +33,7 @@ export default function RssTicker() {
         }
       })
       .catch(() => setError(true));
-  }, []);
+  }, [refreshKey]);
 
   // 트랙 길이에 따라 애니메이션 속도 계산
   useEffect(() => {

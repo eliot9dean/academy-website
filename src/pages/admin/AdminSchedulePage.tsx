@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTableData } from '../../hooks/useTableData';
 import RssTicker from '../../components/RssTicker';
 import type { ScheduleEvent, ConsultationRecord } from '../../types';
@@ -12,7 +12,17 @@ interface BomналEvent {
 }
 
 const BOMNAL_BOARD = 'b202604282b278728a1ac3';
-const BOMNAL_PROXY = 'https://corsproxy.io/?url=https%3A%2F%2Fwww.bomnal.net%2Fajax%2Fcalendar_data.cm';
+
+/** 타임아웃이 있는 fetch 래퍼 */
+async function fetchWithTimeout(url: string, init: RequestInit, ms = 10000): Promise<Response> {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(tid);
+  }
+}
 
 async function fetchBomналMonth(year: number, month: number): Promise<BomналEvent[]> {
   const start = `${year}-${String(month + 1).padStart(2,'0')}-01`;
@@ -20,25 +30,56 @@ async function fetchBomналMonth(year: number, month: number): Promise<Bomна
   const nm = month === 11 ? 1 : month + 2;
   const end = `${ny}-${String(nm).padStart(2,'0')}-01`;
 
-  const body = new URLSearchParams({ board_code: BOMNAL_BOARD, start, end });
+  const params = `board_code=${BOMNAL_BOARD}&start=${start}&end=${end}`;
 
+  // 1차: allorigins GET 프록시 (GET 파라미터로 전달)
   try {
-    // 1차: 직접 요청
-    const res = await fetch('https://www.bomnal.net/ajax/calendar_data.cm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
-    });
-    if (res.ok) return await res.json();
-  } catch { /* CORS 차단 → 프록시 사용 */ }
+    const targetUrl = encodeURIComponent(
+      `https://www.bomnal.net/ajax/calendar_data.cm?${params}`
+    );
+    const res = await fetchWithTimeout(
+      `https://api.allorigins.win/raw?url=${targetUrl}`,
+      { method: 'GET' },
+      10000,
+    );
+    if (res.ok) {
+      const text = await res.text();
+      const data = JSON.parse(text);
+      if (Array.isArray(data)) return data;
+    }
+  } catch { /* 다음 프록시 시도 */ }
 
-  // 2차: CORS 프록시
-  const res2 = await fetch(BOMNAL_PROXY, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
-  if (res2.ok) return await res2.json();
+  // 2차: corsproxy.io POST 프록시
+  try {
+    const res = await fetchWithTimeout(
+      `https://corsproxy.io/?url=${encodeURIComponent('https://www.bomnal.net/ajax/calendar_data.cm')}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params,
+      },
+      10000,
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+  } catch { /* 무시 */ }
+
+  // 3차: 직접 요청 (CORS 허용 환경 대비)
+  try {
+    const res = await fetchWithTimeout(
+      'https://www.bomnal.net/ajax/calendar_data.cm',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params,
+      },
+      8000,
+    );
+    if (res.ok) return await res.json();
+  } catch { /* 무시 */ }
+
   return [];
 }
 
@@ -98,6 +139,10 @@ export default function AdminSchedulePage() {
   const [bomналEvents, setBomналEvents] = useState<BomналEvent[]>([]);
   const [bomналLoading, setBomналLoading] = useState(false);
   const [bomналLastSync, setBomналLastSync] = useState<string | null>(null);
+  const [rssRefreshKey, setRssRefreshKey] = useState(0);
+
+  // 동기화 시간: 10시, 14시, 18시, 22시
+  const SYNC_HOURS = [10, 14, 18, 22];
 
   const syncBomnal = useCallback(async () => {
     setBomналLoading(true);
@@ -110,8 +155,29 @@ export default function AdminSchedulePage() {
     }
   }, [year, month]);
 
-  // 월이 바뀔 때마다 자동 갱신
+  // syncBomnal의 최신 버전을 ref로 유지 (스케줄러 클로저 문제 방지)
+  const syncRef = useRef(syncBomnal);
+  useEffect(() => { syncRef.current = syncBomnal; }, [syncBomnal]);
+
+  // 월이 바뀔 때 즉시 갱신
   useEffect(() => { syncBomnal(); }, [syncBomnal]);
+
+  // 스케줄 동기화: 10시·14시·18시·22시 정각에 자동 실행
+  useEffect(() => {
+    let lastSyncedHour = -1;
+
+    const tick = () => {
+      const h = new Date().getHours();
+      if (SYNC_HOURS.includes(h) && lastSyncedHour !== h) {
+        lastSyncedHour = h;
+        syncRef.current();
+        setRssRefreshKey(k => k + 1);
+      }
+    };
+
+    const id = setInterval(tick, 30_000); // 30초마다 정각 여부 확인
+    return () => clearInterval(id);
+  }, []); // 마운트 시 1회만 등록
 
   /** 해당 날짜에 걸치는 봄날 이벤트 반환 */
   const getBomналDay = (dateStr: string) =>
@@ -185,20 +251,22 @@ export default function AdminSchedulePage() {
           <p className="page-subtitle">상담, 회의, 행사, 외부 미팅 일정</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* 봄날 동기화 상태 */}
-          <button
-            onClick={syncBomnal}
-            disabled={bomналLoading}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50"
-            style={{ borderColor: '#FECACA', background: '#FFF5F5', color: '#DC2626' }}
-            title="봄날 캘린더 수동 동기화"
+          {/* 봄날 동기화 상태 표시 (버튼 없음 — 스케줄 자동 실행) */}
+          <div
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
+            style={{ borderColor: '#FECACA', border: '1px solid #FECACA', background: '#FFF5F5', color: '#DC2626' }}
           >
-            <span>{bomналLoading ? '⏳' : '🔄'}</span>
-            <span className="font-medium">봄날 동기화</span>
+            <span>{bomналLoading ? '⏳' : '📢'}</span>
+            <span className="font-medium">{bomналLoading ? '동기화 중...' : '봄날'}</span>
             {bomналLastSync && !bomналLoading && (
               <span style={{ color: '#94A3B8' }}>{bomналLastSync}</span>
             )}
-          </button>
+            {!bomналLoading && (
+              <span style={{ color: '#94A3B8', fontSize: '0.65rem' }}>
+                (10·14·18·22시 자동갱신)
+              </span>
+            )}
+          </div>
           <button onClick={() => { setForm({ ...form, date: selectedDate }); setShowModal(true); }} className="btn-primary">
             + 일정 추가
           </button>
@@ -206,7 +274,7 @@ export default function AdminSchedulePage() {
       </div>
 
       {/* 봄날 소식 RSS 롤링 배너 */}
-      <RssTicker />
+      <RssTicker refreshKey={rssRefreshKey} />
 
       {/* Filter buttons + Legend */}
       <div className="flex gap-2 mb-4 flex-wrap items-center">
