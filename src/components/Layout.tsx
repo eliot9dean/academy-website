@@ -69,7 +69,7 @@ function ChangePasswordModal({ onClose, currentEmail }: { onClose: () => void; c
     e.preventDefault();
     setError('');
     if (newPw !== newPw2) { setError('새 비밀번호가 일치하지 않습니다'); return; }
-    if (newPw.length < 4)  { setError('새 비밀번호는 4자 이상이어야 합니다'); return; }
+    if (newPw.length < 6)  { setError('새 비밀번호는 6자 이상이어야 합니다'); return; }
     setLoading(true);
     const result = await changePasswordAPI(oldPw, newPw, currentEmail);
     setLoading(false);
@@ -123,7 +123,7 @@ function ChangePasswordModal({ onClose, currentEmail }: { onClose: () => void; c
                   value={newPw}
                   onChange={e => setNewPw(e.target.value)}
                   required
-                  placeholder="새 비밀번호 (4자 이상)"
+                  placeholder="새 비밀번호 (6자 이상)"
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>

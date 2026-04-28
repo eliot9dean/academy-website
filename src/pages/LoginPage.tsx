@@ -41,7 +41,7 @@ function SignUpForm({ onBack }: { onBack: () => void }) {
     e.preventDefault();
     setError('');
     if (password !== password2) { setError('비밀번호가 일치하지 않습니다'); return; }
-    if (password.length < 4)    { setError('비밀번호는 4자 이상이어야 합니다'); return; }
+    if (password.length < 6)    { setError('비밀번호는 6자 이상이어야 합니다'); return; }
     setLoading(true);
     const result = await supabaseSignUp(email.trim(), password, name.trim(), role);
     setLoading(false);
@@ -88,7 +88,7 @@ function SignUpForm({ onBack }: { onBack: () => void }) {
         <label className="block text-xs font-medium text-gray-600 mb-1">비밀번호</label>
         <input
           type="password" value={password} onChange={e => setPassword(e.target.value)}
-          required placeholder="4자 이상"
+          required placeholder="6자 이상"
           className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
