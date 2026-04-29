@@ -154,6 +154,7 @@ export default function AdminSchedulePage() {
   const [month, setMonth] = useState(TODAY_MONTH);
   const [selectedDate, setSelectedDate] = useState<string>(TODAY_STR);
   const [showModal, setShowModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null); // null = 추가, 값 = 수정
   const [typeFilter, setTypeFilter] = useState<EventType | 'all'>('all');
   const [events, setEvents] = useTableData<ScheduleEvent>('schedule');
   const [, setConsultations] = useTableData<ConsultationRecord>('consultations');
@@ -162,6 +163,27 @@ export default function AdminSchedulePage() {
   });
   // 상담 유형일 때만 사용하는 학생명 (ScheduleEvent에 없는 별도 필드)
   const [consultStudentName, setConsultStudentName] = useState('');
+
+  /** 수정 모달 열기 */
+  const openEditModal = (ev: ScheduleEvent) => {
+    setEditingEvent(ev);
+    setForm({ ...ev });
+    // 상담이면 제목에서 학생명 추출 (예: "홍길동 상담" → "홍길동")
+    if (ev.type === 'consultation') {
+      setConsultStudentName(ev.title.replace(/ 상담$/, ''));
+    } else {
+      setConsultStudentName('');
+    }
+    setShowModal(true);
+  };
+
+  /** 모달 닫기 (추가/수정 공용) */
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingEvent(null);
+    setConsultStudentName('');
+    setForm({ type: 'consultation', personType: '학부모', date: TODAY_STR, startTime: '10:00', endTime: '10:30' });
+  };
 
   // ── 봄날 캘린더 자동 동기화 ─────────────────────────────────────────────
   const bomналCacheKey = `bomnal_${year}_${month}`;
@@ -277,7 +299,7 @@ export default function AdminSchedulePage() {
   useEffect(() => {
     if (!showModal) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setShowModal(false); setConsultStudentName(''); }
+      if (e.key === 'Escape') closeModal();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -285,50 +307,72 @@ export default function AdminSchedulePage() {
 
   const handleSave = () => {
     const eventType = (form.type as EventType) ?? 'consultation';
-    // 상담 유형은 학생명 필수, 나머지는 제목 필수
     if (eventType === 'consultation' && !consultStudentName.trim()) return;
     if (eventType !== 'consultation' && !form.title) return;
     if (!form.date) return;
 
-    // 상담 일정 제목: "홍길동 상담", 나머지는 입력된 제목 사용
     const eventTitle = eventType === 'consultation'
       ? `${consultStudentName.trim()} 상담`
       : form.title!;
 
-    const newEvent: ScheduleEvent = {
-      id: `e-${Date.now()}`,
-      title: eventTitle,
-      date: form.date!,
-      startTime: form.startTime ?? '09:00',
-      endTime: form.endTime ?? '10:00',
-      type: eventType,
-      personName: form.personName ?? '',
-      personType: (form.personType as ScheduleEvent['personType']) ?? '기타',
-      content: form.content ?? '',
-      phone: form.phone,
-    };
-    setEvents(prev => [...prev, newEvent]);
-
-    // 상담 유형이면 등록전환율 상담 목록에도 자동 등록
-    if (eventType === 'consultation') {
-      const newConsultation: ConsultationRecord = {
-        id: `c-${Date.now()}`,
-        studentName: consultStudentName.trim(),          // 전용 학생명 필드 사용
-        parentName: form.personName ?? '',               // 상담자명 → 학부모명으로
-        phone: form.phone ?? '',
+    if (editingEvent) {
+      // ── 수정 모드 ─────────────────────────────────────────────────────────
+      const updated: ScheduleEvent = {
+        ...editingEvent,
+        title: eventTitle,
         date: form.date!,
-        result: 'pending',
-        contactForEvents: false,
-        source: '직접상담',
-        notes: form.content ?? '',
+        startTime: form.startTime ?? editingEvent.startTime,
+        endTime: form.endTime ?? editingEvent.endTime,
+        type: eventType,
+        personName: form.personName ?? '',
+        personType: (form.personType as ScheduleEvent['personType']) ?? '기타',
+        content: form.content ?? '',
+        phone: form.phone,
       };
-      setConsultations(prev => [newConsultation, ...prev]);
+      setEvents(prev => prev.map(e => e.id === editingEvent.id ? updated : e));
+      setSelectedDate(form.date!);
+    } else {
+      // ── 추가 모드 ─────────────────────────────────────────────────────────
+      const newEvent: ScheduleEvent = {
+        id: `e-${Date.now()}`,
+        title: eventTitle,
+        date: form.date!,
+        startTime: form.startTime ?? '09:00',
+        endTime: form.endTime ?? '10:00',
+        type: eventType,
+        personName: form.personName ?? '',
+        personType: (form.personType as ScheduleEvent['personType']) ?? '기타',
+        content: form.content ?? '',
+        phone: form.phone,
+      };
+      setEvents(prev => [...prev, newEvent]);
+
+      if (eventType === 'consultation') {
+        const newConsultation: ConsultationRecord = {
+          id: `c-${Date.now()}`,
+          studentName: consultStudentName.trim(),
+          parentName: form.personName ?? '',
+          phone: form.phone ?? '',
+          date: form.date!,
+          result: 'pending',
+          contactForEvents: false,
+          source: '직접상담',
+          notes: form.content ?? '',
+        };
+        setConsultations(prev => [newConsultation, ...prev]);
+      }
+      setSelectedDate(form.date!);
     }
 
-    setSelectedDate(form.date!);
-    setShowModal(false);
-    setConsultStudentName('');
-    setForm({ type: 'consultation', personType: '학부모', date: TODAY_STR, startTime: '10:00', endTime: '10:30' });
+    closeModal();
+  };
+
+  /** 일정 삭제 */
+  const handleDelete = () => {
+    if (!editingEvent) return;
+    if (!window.confirm(`"${editingEvent.title}" 일정을 삭제하시겠습니까?`)) return;
+    setEvents(prev => prev.filter(e => e.id !== editingEvent.id));
+    closeModal();
   };
 
   return (
@@ -503,6 +547,23 @@ export default function AdminSchedulePage() {
                             {ev.description}
                           </div>
                         )}
+                        {/* URL 디버그 — 실제 필드명 확인용 (개발 단계) */}
+                        {!eventUrl && (() => {
+                          const dbg = Object.entries(ev)
+                            .filter(([k, v]) => typeof v === 'string' && (
+                              (v as string).startsWith('http') ||
+                              k.toLowerCase().includes('url') ||
+                              k.toLowerCase().includes('link')
+                            ));
+                          if (dbg.length === 0) return null;
+                          return (
+                            <div className="mt-1 pt-1 border-t text-xs" style={{ borderColor: '#FECACA', color: '#94A3B8' }}>
+                              {dbg.map(([k, v]) => (
+                                <div key={k}><b>{k}</b>: {v as string}</div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                         {/* URL — 미리보기 후 수동 열기 */}
                         {eventUrl && (
                           <div className="mt-1.5 pt-1.5 border-t space-y-1" style={{ borderColor: '#FECACA' }}>
@@ -526,17 +587,25 @@ export default function AdminSchedulePage() {
                     </div>
                   );
                 })}
-                {/* 내부 일정 카드 */}
+                {/* 내부 일정 카드 — 클릭 시 수정 */}
                 {selectedEvents.sort((a,b) => a.startTime.localeCompare(b.startTime)).map(ev => {
                   const cfg = TYPE_CONFIG[ev.type];
                   const ptStyle = PERSON_TYPE_STYLE[ev.personType] ?? PERSON_TYPE_STYLE['기타'];
                   return (
-                    <div key={ev.id} className="rounded-xl p-3" style={{ background: cfg.bg, border: `1px solid ${cfg.dot}33` }}>
-                      <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
-                          style={{ background: '#fff', color: cfg.text }}>{cfg.label}</span>
-                        <span className="text-xs font-medium px-1.5 py-0.5 rounded-md"
-                          style={{ background: ptStyle.bg, color: ptStyle.text }}>{ev.personType}</span>
+                    <div key={ev.id}
+                      className="rounded-xl p-3 cursor-pointer transition-shadow hover:shadow-md"
+                      style={{ background: cfg.bg, border: `1px solid ${cfg.dot}33` }}
+                      onClick={() => openEditModal(ev)}
+                      title="클릭하여 수정"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
+                            style={{ background: '#fff', color: cfg.text }}>{cfg.label}</span>
+                          <span className="text-xs font-medium px-1.5 py-0.5 rounded-md"
+                            style={{ background: ptStyle.bg, color: ptStyle.text }}>{ev.personType}</span>
+                        </div>
+                        <span className="text-xs" style={{ color: '#CBD5E1' }}>✏️</span>
                       </div>
                       <h4 className="font-bold text-sm mb-1.5" style={{ color: '#0F172A' }}>{ev.title}</h4>
                       <div className="space-y-0.5 text-xs" style={{ color: cfg.text }}>
@@ -554,11 +623,13 @@ export default function AdminSchedulePage() {
         </div>
       </div>
 
-      {/* Add Modal */}
+      {/* 추가 / 수정 Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(15,23,42,0.4)' }}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="font-bold text-base mb-4" style={{ color: '#0F172A' }}>일정 추가</h2>
+            <h2 className="font-bold text-base mb-4" style={{ color: '#0F172A' }}>
+              {editingEvent ? '✏️ 일정 수정' : '+ 일정 추가'}
+            </h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -648,8 +719,17 @@ export default function AdminSchedulePage() {
               </div>
             </div>
             <div className="flex gap-2 mt-5">
-              <button onClick={() => { setShowModal(false); setConsultStudentName(''); }} className="flex-1 btn-secondary">취소</button>
-              <button onClick={handleSave} className="flex-1 btn-primary">저장</button>
+              {editingEvent && (
+                <button onClick={handleDelete}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                  style={{ background: '#FEE2E2', color: '#DC2626' }}>
+                  삭제
+                </button>
+              )}
+              <button onClick={closeModal} className="flex-1 btn-secondary">취소</button>
+              <button onClick={handleSave} className="flex-1 btn-primary">
+                {editingEvent ? '수정 저장' : '저장'}
+              </button>
             </div>
           </div>
         </div>
