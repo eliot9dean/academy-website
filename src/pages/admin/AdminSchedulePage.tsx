@@ -99,17 +99,6 @@ async function fetchBomналMonth(year: number, month: number): Promise<Bomна
   return null; // 모든 프록시 실패 → null (캐시 보존)
 }
 
-/** 봄날 이벤트 상세 조회 (URL 필드 포함) */
-async function fetchBomналDetail(id: string): Promise<Record<string, unknown>> {
-  try {
-    const res = await fetchWithTimeout(
-      `/api/bomnal?idx=${id}&board=${BOMNAL_BOARD}`,
-      { method: 'GET' }, 8000,
-    );
-    if (res.ok) return await res.json();
-  } catch { /* 무시 */ }
-  return {};
-}
 
 const DAYS = ['일','월','화','수','목','금','토'];
 
@@ -197,8 +186,6 @@ export default function AdminSchedulePage() {
   });
   const [bomналSyncing, setBomналSyncing] = useState(false);
   const [rssRefreshKey, setRssRefreshKey] = useState(0);
-  // 이벤트별 상세 URL 캐시 { [id]: url }
-  const [bomналUrls, setBomналUrls] = useState<Record<string, string>>({});
 
   // 동기화 시간: 10시, 14시, 18시, 22시
   const SYNC_HOURS = [10, 14, 18, 22];
@@ -223,28 +210,6 @@ export default function AdminSchedulePage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, bomналCacheKey]);
-
-  // 이벤트 상세 URL 일괄 조회 (표시된 이벤트들의 URL 가져오기)
-  useEffect(() => {
-    if (bomналEvents.length === 0) return;
-    const missing = bomналEvents.filter(e => !e.url && !bomналUrls[e.id]);
-    if (missing.length === 0) return;
-
-    missing.forEach(async ev => {
-      const detail = await fetchBomналDetail(ev.id);
-      // 상세에서 url 추출 (다양한 필드명 체크)
-      const detailUrl = (
-        detail.url || detail.link || detail.boardUrl || detail.pageUrl ||
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (detail.extendedProps as any)?.url ||
-        Object.values(detail).find((v): v is string => typeof v === 'string' && v.startsWith('http'))
-      ) as string ?? '';
-      if (detailUrl) {
-        setBomналUrls(prev => ({ ...prev, [ev.id]: detailUrl }));
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bomналEvents]);
 
   // syncBomnal의 최신 버전을 ref로 유지 (스케줄러 클로저 문제 방지)
   const syncRef = useRef(syncBomnal);
@@ -515,22 +480,10 @@ export default function AdminSchedulePage() {
                     ? new Date(new Date(ev.end).getTime() - 86400000).toISOString().slice(0,10)
                     : ev.start;
                   const isSingleDay = endDisplay === ev.start;
-                  // URL: 목록 API 필드 → 상세 조회 결과 → catch-all 순으로 확인
-                  const eventUrl: string = (() => {
-                    // 1순위: 상세 조회로 가져온 URL
-                    if (bomналUrls[ev.id]) return bomналUrls[ev.id];
-                    // 2순위: 목록 API 필드들
-                    const candidates = [
-                      ev.url, ev.link, ev.boardUrl, ev.pageUrl, ev.href,
-                      ev.extendedProps?.url, ev.extendedProps?.link,
-                    ];
-                    const explicit = candidates.find(v => typeof v === 'string' && v.startsWith('http'));
-                    if (explicit) return explicit as string;
-                    // 3순위: 모든 string 필드 중 http 시작값
-                    return Object.values(ev).find(
-                      (v): v is string => typeof v === 'string' && v.startsWith('http')
-                    ) ?? '';
-                  })();
+                  // CF Function이 ev.url에 bomnal.net 이벤트 페이지 URL을 주입
+                  const eventUrl: string = (typeof ev.url === 'string' && ev.url.startsWith('http'))
+                    ? ev.url
+                    : '';
                   return (
                     <div key={`b-${ev.id}`} className="rounded-xl p-3" style={{ background: '#FFF5F5', border: '1px solid #FECACA' }}>
                       <div className="flex items-center gap-1.5 mb-1.5">
@@ -547,23 +500,6 @@ export default function AdminSchedulePage() {
                             {ev.description}
                           </div>
                         )}
-                        {/* URL 디버그 — 실제 필드명 확인용 (개발 단계) */}
-                        {!eventUrl && (() => {
-                          const dbg = Object.entries(ev)
-                            .filter(([k, v]) => typeof v === 'string' && (
-                              (v as string).startsWith('http') ||
-                              k.toLowerCase().includes('url') ||
-                              k.toLowerCase().includes('link')
-                            ));
-                          if (dbg.length === 0) return null;
-                          return (
-                            <div className="mt-1 pt-1 border-t text-xs" style={{ borderColor: '#FECACA', color: '#94A3B8' }}>
-                              {dbg.map(([k, v]) => (
-                                <div key={k}><b>{k}</b>: {v as string}</div>
-                              ))}
-                            </div>
-                          );
-                        })()}
                         {/* URL — 미리보기 후 수동 열기 */}
                         {eventUrl && (
                           <div className="mt-1.5 pt-1.5 border-t space-y-1" style={{ borderColor: '#FECACA' }}>
