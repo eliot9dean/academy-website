@@ -71,7 +71,7 @@ export default function RssTicker({ refreshKey = 0 }: Props) {
         style={{ background: '#3B82F6', color: '#fff', whiteSpace: 'nowrap' }}
       >
         <span>📢</span>
-        <span>봄날 소식</span>
+        <span>뼈때리는 마케팅</span>
       </div>
 
       {/* 스크롤 영역 */}
