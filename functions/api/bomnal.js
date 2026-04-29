@@ -57,14 +57,12 @@ export async function onRequestGet(context) {
       );
     }
 
-    // ── 각 이벤트에 bomnal.net 직접 링크 주입 ──────────────────────────
-    // calendar_data.cm은 url: "" 빈값 반환 → 이벤트 상세 페이지 URL로 대체
+    // ── 각 이벤트 필드 정리 ──────────────────────────────────────────────
+    // calendar_data.cm의 url 필드: 실제 URL이 있으면 그대로, 없으면 빈 문자열 유지
+    // (가짜 bomnal.net/calendar URL을 모든 이벤트에 주입하지 않음)
     events = events.map(ev => ({
       ...ev,
-      url       : ev.url && ev.url.startsWith('http')
-                    ? ev.url  // 혹시 API가 실제 URL을 반환하면 그대로 사용
-                    : `${BOMNAL_BASE}/calendar?board_code=${board}&idx=${ev.id}`,
-      bomnal_url: `${BOMNAL_BASE}/calendar?board_code=${board}&idx=${ev.id}`,
+      url: (ev.url && ev.url.startsWith('http')) ? ev.url : '',
     }));
 
     return new Response(JSON.stringify(events), { headers: cors });
