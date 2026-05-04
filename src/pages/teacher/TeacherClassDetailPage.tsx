@@ -102,7 +102,11 @@ export default function TeacherClassDetailPage() {
   const [dbObservations, setDbObservations] = useTableData<ObservationRecord>('observations');
 
   const [activeTab,    setActiveTab]    = useState<Tab>('attendance');
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  // 선택 날짜를 반별 localStorage에 저장 → 역할(선생님/원장) 관계없이 같은 날짜 유지
+  const [selectedDate, setSelectedDateRaw] = useLocalStorage<string>(
+    `ams_selectedDate_${classId}`, todayStr,
+  );
+  const setSelectedDate = (d: string) => setSelectedDateRaw(d);
   const [notice,       setNotice]       = useState('');
   const [savedNotices, setSavedNotices] = useLocalStorage<string[]>(`ams_notices_${classId}`, []);
   const [editingNoticeIdx, setEditingNoticeIdx] = useState<number | null>(null);
