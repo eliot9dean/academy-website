@@ -134,7 +134,7 @@ export default function StaffStudentsPage() {
   const [classHistory]          = useTableData<ClassHistoryRecord>('classHistory');
   const [enrollmentMgmt]        = useTableData<EnrollmentMgmt>('enrollmentMgmt');
   const [classConfigsDB]        = useTableData<ClassConfig>('classConfigs');
-  const [textbooksDB]           = useTableData<{ id: string; name: string; fee: number }>('textbooks');
+  const [textbooksDB]           = useTableData<{ id: string; name: string; price: number }>('textbooks');
 
   // ── 파생 데이터 ─────────────────────────────────────────────
   const filtered = useMemo(() =>
@@ -223,10 +223,10 @@ export default function StaffStudentsPage() {
       cfgByClass[cfg.classId] = cfg.textbookIds ?? [];
     }
 
-    // textbook ID → { name, fee } 룩업
+    // textbook ID → { name, fee } 룩업 (Textbook 타입의 price 필드 사용)
     const tbLookup: Record<string, { name: string; fee: number }> = {};
     for (const tb of textbooksDB) {
-      tbLookup[tb.id] = { name: tb.name, fee: tb.fee };
+      tbLookup[tb.id] = { name: tb.name, fee: tb.price };
     }
 
     // 학생별 그룹핑
