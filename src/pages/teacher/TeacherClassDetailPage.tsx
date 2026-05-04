@@ -2324,19 +2324,22 @@ export default function TeacherClassDetailPage() {
 
       {/* ── TAB: 성적표 (모바일 최적화, 19.5:9) ── */}
       {activeTab === 'report_card' && (() => {
-        const rptStart = dateRelative(30);
-        const rptEnd   = todayStr;
-        const m3Start  = (() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return fmtDate(d); })();
+        const rptEnd          = todayStr;
+        const thisMonthStart  = todayStr.slice(0, 7) + '-01'; // 이달 1일
+        const rptStart        = dateRelative(180); // 데일리/주간 후보풀 (최근 180일)
+        const m3Start         = (() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return fmtDate(d); })();
 
         const clsDailyAll  = dbTestScores.filter(t => t.classId === classId && t.type === 'daily'   && t.date >= rptStart && t.date <= rptEnd);
         const clsWeekly    = dbTestScores.filter(t => t.classId === classId && t.type === 'weekly'  && t.date >= rptStart && t.date <= rptEnd).sort((a,b)=>a.date.localeCompare(b.date));
         const clsMonthly   = dbTestScores.filter(t => t.classId === classId && t.type === 'monthly' && t.date >= m3Start).sort((a,b)=>a.date.localeCompare(b.date));
-        const clsAtt       = dbAttendance.filter(a => a.classId === classId && a.date >= rptStart && a.date <= rptEnd);
-        const clsHw        = dbHomework.filter(h => h.classId === classId && h.date >= rptStart && h.date <= rptEnd);
+        // 출석·과제는 이달 자료만
+        const clsAtt       = dbAttendance.filter(a => a.classId === classId && a.date >= thisMonthStart && a.date <= rptEnd);
+        const clsHw        = dbHomework.filter(h => h.classId === classId && h.date >= thisMonthStart && h.date <= rptEnd);
 
-        const dailyDates   = [...new Set(clsDailyAll.map(t=>t.date))].sort();
-        const weeklyDates  = [...new Set(clsWeekly.map(t=>t.date))].sort();
-        const monthlyDates = [...new Set(clsMonthly.map(t=>t.date))].sort();
+        // 데일리 최근 10회 / 주간 최근 5회 / 월간 최근 3회
+        const dailyDates   = [...new Set(clsDailyAll.map(t=>t.date))].sort().slice(-10);
+        const weeklyDates  = [...new Set(clsWeekly.map(t=>t.date))].sort().slice(-5);
+        const monthlyDates = [...new Set(clsMonthly.map(t=>t.date))].sort().slice(-3);
 
         // ── 반 평균 (날짜별) ──────────────────────────────────────────────
         const clsDailyAvgMap: Record<string, number> = Object.fromEntries(
@@ -2436,7 +2439,7 @@ export default function TeacherClassDetailPage() {
                   placeholder="https://hooks.example.com/..."
                   value={webhookUrl} onChange={e=>setWebhookUrl(e.target.value)} />
               </div>
-              <div className="text-xs text-gray-400">기간: {rptStart} ~ {rptEnd} · 데일리 {dailyDates.length}회 · 주간 {weeklyDates.length}회 · 월간 {monthlyDates.length}회</div>
+              <div className="text-xs text-gray-400">데일리 최근 {dailyDates.length}회 · 주간 최근 {weeklyDates.length}회 · 월간 최근 {monthlyDates.length}회 · 출석/과제 {thisMonthStart.slice(0,7)}</div>
             </div>
 
             {/* ── 학생별 성적표 (모바일 카드: max-w-sm 중앙정렬) ── */}
@@ -2631,8 +2634,8 @@ export default function TeacherClassDetailPage() {
                           <span>🏆</span> 월간 평가 — 3개월 추이
                         </div>
                         {/* 총점 추이 */}
-                        <ResponsiveContainer width="100%" height={120}>
-                          <LineChart data={monthlyChartData} margin={{top:4,right:8,bottom:4,left:-28}}>
+                        <ResponsiveContainer width="100%" height={140}>
+                          <LineChart data={monthlyChartData} margin={{top:24,right:8,bottom:4,left:-28}}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
                             <XAxis dataKey="name" tick={{fontSize:10}} />
                             <YAxis domain={[0,100]} tick={{fontSize:9}} />
