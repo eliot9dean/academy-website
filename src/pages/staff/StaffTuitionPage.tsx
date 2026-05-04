@@ -97,7 +97,7 @@ export default function StaffTuitionPage() {
   const [textbooks]           = useTableData<Textbook>('textbooks');
 
   // ── 필터 상태 ───────────────────────────────────────────────
-  const [selMonth,     setSelMonth]     = useState('2026-04');
+  const [selMonth,     setSelMonth]     = useState(THIS_MONTH);
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('this');
   const [selClass,     setSelClass]     = useState('all');
   const [tuFilt,       setTuFilt]       = useState<'all' | 'paid' | 'unpaid'>('all');
@@ -169,9 +169,8 @@ export default function StaffTuitionPage() {
       .filter(r => !search || (getStu(r.studentId)?.name ?? '').includes(search))
       .sort((a, b) => {
         if (a.classId !== b.classId) return a.classId.localeCompare(b.classId);
-        if (a.paymentMonth !== b.paymentMonth) return a.paymentMonth.localeCompare(b.paymentMonth);
-        if (a.tuitionPaid !== b.tuitionPaid) return a.tuitionPaid ? 1 : -1;
-        return a.studentId.localeCompare(b.studentId);
+        if (a.studentId !== b.studentId) return a.studentId.localeCompare(b.studentId);
+        return a.paymentMonth.localeCompare(b.paymentMonth);
       });
   }, [records, inPeriod, selClass, tuFilt, tbFilt, search, getStu]);
 
