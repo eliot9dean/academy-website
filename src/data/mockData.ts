@@ -37,6 +37,12 @@ export const mockStudents: Student[] = [
   { id: 's18', name: '신동우', grade: '중3', school: '별빛중학교',  parentName: '신학부', studentPhone: '010-1001-0018', parentPhone: '010-8899-0011', enrollDate: '2024-09-01', status: 'withdrawn', withdrawDate: '2025-11-15', withdrawReason: '이사',      classIds: [], tuitionPaid: true,  tuitionDueDate: '2025-11-15' },
   { id: 's19', name: '유나리', grade: '중2', school: '미래중학교',  parentName: '유학부', studentPhone: '010-1001-0019', parentPhone: '010-9900-1122', enrollDate: '2024-06-01', status: 'withdrawn', withdrawDate: '2025-12-20', withdrawReason: '경제적사유', classIds: [], tuitionPaid: true,  tuitionDueDate: '2025-12-20' },
   { id: 's20', name: '차준호', grade: '중1', school: '한빛중학교',  parentName: '차학부', studentPhone: '010-1001-0020', parentPhone: '010-0011-2233', enrollDate: '2025-09-01', status: 'withdrawn', withdrawDate: '2026-01-15', withdrawReason: '타학원이동', classIds: [], tuitionPaid: true,  tuitionDueDate: '2026-01-15' },
+  // ── 4월 퇴원 학생 (퇴원 분석 더미) ──────────────────────────────────
+  { id: 's21', name: '고은별', grade: '중2', school: '별빛중학교',  parentName: '고학부', studentPhone: '010-1001-0021', parentPhone: '010-1122-4433', enrollDate: '2024-09-01', status: 'withdrawn', withdrawDate: '2026-04-05', withdrawReason: '타학원이동', classIds: [], tuitionPaid: true,  tuitionDueDate: '2026-04-05' },
+  { id: 's22', name: '남기준', grade: '중1', school: '한빛중학교',  parentName: '남학부', studentPhone: '010-1001-0022', parentPhone: '010-2233-5544', enrollDate: '2025-03-01', status: 'withdrawn', withdrawDate: '2026-04-12', withdrawReason: '경제적사유', classIds: [], tuitionPaid: false, tuitionDueDate: '2026-04-12' },
+  { id: 's23', name: '류지안', grade: '중3', school: '미래중학교',  parentName: '류학부', studentPhone: '010-1001-0023', parentPhone: '010-3344-6655', enrollDate: '2024-03-01', status: 'withdrawn', withdrawDate: '2026-04-18', withdrawReason: '이사',       classIds: [], tuitionPaid: true,  tuitionDueDate: '2026-04-18' },
+  { id: 's24', name: '마서준', grade: '중2', school: '별빛중학교',  parentName: '마학부', studentPhone: '010-1001-0024', parentPhone: '010-4455-7766', enrollDate: '2025-09-01', status: 'withdrawn', withdrawDate: '2026-04-23', withdrawReason: '성적부진',  classIds: [], tuitionPaid: true,  tuitionDueDate: '2026-04-23' },
+  { id: 's25', name: '배수진', grade: '중1', school: '한빛중학교',  parentName: '배학부', studentPhone: '010-1001-0025', parentPhone: '010-5566-8877', enrollDate: '2025-09-01', status: 'withdrawn', withdrawDate: '2026-04-30', withdrawReason: '타학원이동', classIds: [], tuitionPaid: true,  tuitionDueDate: '2026-04-30' },
 ];
 
 // ─── CLASSES ──────────────────────────────────────────────────
@@ -584,6 +590,15 @@ export const mockConsultations: ConsultationRecord[] = [
   { id: 'con13', studentName: '서준혁', parentName: '서학부모', phone: '010-3013-4013', date: '2026-04-08', result: 'declined',   contactForEvents: false, source: '현수막',      notes: '현재 다니는 학원 계속 다닐 예정. 비교 상담 목적 방문.' },
   { id: 'con14', studentName: '안지유', parentName: '안학부모', phone: '010-4014-5014', date: '2026-04-10', result: 'registered', contactForEvents: true,  source: '지인 추천',   notes: '노지민 학생 학부모 소개. 국어 약점 개선 목적. C반 등록.' },
   { id: 'con15', studentName: '조현서', parentName: '조학부모', phone: '010-5015-6015', date: '2026-04-14', result: 'pending',    contactForEvents: true,  source: '인스타그램',  notes: '중간고사 이후 결정 예정. 5월 초 재연락 요청.' },
+  // ── 4월 추가 상담 (등록전환율 더미) ──────────────────────────────────
+  { id: 'con16', studentName: '황민서', parentName: '황학부모', phone: '010-6016-7016', date: '2026-04-15', result: 'registered', contactForEvents: true,  source: '인스타그램',  notes: '인스타 릴스 광고 보고 방문. 중2 수학 집중 원함. 당일 B반 등록.' },
+  { id: 'con17', studentName: '전도윤', parentName: '전학부모', phone: '010-7017-8017', date: '2026-04-17', result: 'declined',   contactForEvents: false, source: '현수막',      notes: '자녀 스케줄 과부하로 미등록. 방과후 수업과 겹침 문제.' },
+  { id: 'con18', studentName: '석지호', parentName: '석학부모', phone: '010-8018-9018', date: '2026-04-19', result: 'registered', contactForEvents: true,  source: '지인 추천',   notes: '한주원 학생 부모 소개. 중3 국어·영어 병행. 즉시 C반 등록.' },
+  { id: 'con19', studentName: '소하늘', parentName: '소학부모', phone: '010-9019-0019', date: '2026-04-22', result: 'pending',    contactForEvents: true,  source: '인터넷 검색', notes: '블로그 후기 보고 내방. 중1 영어 관심. 체험 수업 예약 후 결정 예정.' },
+  { id: 'con20', studentName: '탁지원', parentName: '탁학부모', phone: '010-0020-1020', date: '2026-04-24', result: 'declined',   contactForEvents: false, source: '현수막',      notes: '거리 문제로 미등록. 가까운 다른 학원 알아보는 중.' },
+  { id: 'con21', studentName: '편수현', parentName: '편학부모', phone: '010-1021-2021', date: '2026-04-26', result: 'registered', contactForEvents: true,  source: '인스타그램',  notes: '인스타 팔로워 통해 DM 상담 후 방문. 중2 수학 D반 등록.' },
+  { id: 'con22', studentName: '하윤성', parentName: '하학부모', phone: '010-2022-3022', date: '2026-04-28', result: 'pending',    contactForEvents: true,  source: '지인 추천',   notes: '중1 영어 신규 문의. 5월 초 레벨 테스트 예약 완료. 결과 후 결정.' },
+  { id: 'con23', studentName: '함소율', parentName: '함학부모', phone: '010-3023-4023', date: '2026-04-29', result: 'registered', contactForEvents: true,  source: '인터넷 검색', notes: '네이버 학원 검색 후 전화 문의. 중3 영어 집중. 당일 A반 등록.' },
 ];
 
 // ─── FINANCIALS (~20M income/month) ───────────────────────────

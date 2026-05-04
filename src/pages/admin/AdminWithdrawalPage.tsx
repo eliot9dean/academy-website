@@ -68,6 +68,7 @@ const TEACHER_BY_STUDENT: Record<string, string> = {
   s3: '박민호', s4: '박민호', s12: '박민호',
   s5: '최지혜', s10: '최지혜', s13: '최지혜',
   s7: '최지혜', s8: '박민호', s14: '박민호',
+  s21: '이수진', s22: '박민호', s23: '최지혜', s24: '이수진', s25: '박민호',
 };
 
 function calcStart(preset: RangePreset): string {
