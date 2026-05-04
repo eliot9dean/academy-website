@@ -108,13 +108,37 @@ export async function syncFromAPI(): Promise<void> {
     try {
       const serverData = await supabaseGetAll();
       const serverSeedVersion = (serverData?._seed_version?.[0] as { v?: number } | undefined)?.v;
-      if (!serverData || Object.keys(serverData).length === 0 || serverSeedVersion !== SEED_VERSION) {
-        // 첫 사용 또는 시드 버전 불일치: DB_INIT으로 Supabase 전체 재업로드
+
+      if (!serverData || Object.keys(serverData).length === 0) {
+        // 첫 사용: DB_INIT 전체 업로드
         const initWithVersion = { ...DB_INIT, _seed_version: [{ v: SEED_VERSION }] };
         await uploadAllToSupabase(initWithVersion);
         writeDB({ ...DB_INIT });
+
+      } else if (serverSeedVersion !== SEED_VERSION) {
+        // 시드 버전 불일치: 사용자 데이터는 보존하고 새 레코드만 추가 (id 기준 병합)
+        const merged: Record<string, Row[]> = {};
+        // 서버의 기존 테이블은 모두 가져옴 (사용자 작성 데이터 보존)
+        for (const [table, rows] of Object.entries(serverData)) {
+          if (table !== '_seed_version') merged[table] = rows;
+        }
+        // DB_INIT 테이블에서 서버에 없는 id를 가진 레코드만 추가
+        for (const [table, initRows] of Object.entries(DB_INIT)) {
+          const serverRows = merged[table] ?? [];
+          const serverIds = new Set(serverRows.map((r: Row) => String(r.id ?? '')).filter(Boolean));
+          const toAdd = initRows.filter(r => r.id && !serverIds.has(String(r.id)));
+          merged[table] = [...serverRows, ...toAdd];
+        }
+        merged._seed_version = [{ v: SEED_VERSION }];
+        await uploadAllToSupabase(merged);
+        // _seed_version은 로컬 DB에 포함하지 않음
+        const { _seed_version: _, ...mergedLocal } = merged;
+        writeDB(mergedLocal);
+
       } else {
-        writeDB(serverData);
+        // 버전 일치: 서버 데이터 사용 (_seed_version 제외)
+        const { _seed_version: _, ...serverLocal } = serverData;
+        writeDB(serverLocal);
       }
       _apiSynced = true;
     } catch { /* 무시 */ }
