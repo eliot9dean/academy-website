@@ -87,6 +87,25 @@ const givenName = (name: string) => name.length > 1 ? name.slice(1) : name;
 const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
 const dateRelative = (days: number) => { const d = new Date(); d.setDate(d.getDate() - days); return fmtDate(d); };
 
+// 라인차트 공통 툴팁 — 반평균을 항상 마지막에 표시
+function LineChartTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
+  if (!active || !payload || payload.length === 0) return null;
+  const students = payload.filter(p => p.name !== '반평균').sort((a, b) => b.value - a.value);
+  const avg = payload.find(p => p.name === '반평균');
+  const rows = avg ? [...students, avg] : students;
+  return (
+    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+      <p style={{ fontWeight: 600, marginBottom: 4, color: '#374151' }}>{label}</p>
+      {rows.map(p => (
+        <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
+          <span style={{ color: '#6B7280', minWidth: 48 }}>{p.name}</span>
+          <span style={{ fontWeight: 700, color: '#1E293B' }}>{p.value}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function TeacherClassDetailPage() {
   const { classId } = useParams<{ classId: string }>();
@@ -2898,7 +2917,7 @@ export default function TeacherClassDetailPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                   <YAxis domain={[50, 100]} tick={{ fontSize: 11 }} tickFormatter={v => `${v}%`} />
-                  <Tooltip formatter={(v) => `${v}%`} />
+                  <Tooltip content={<LineChartTooltip />} />
                   <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
                   {students.filter(s => visibleDailyStudents.includes(s.id)).map((s, i) => (
                     <Line key={s.id} type="monotone" dataKey={s.name} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />
@@ -2958,7 +2977,7 @@ export default function TeacherClassDetailPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                   <YAxis domain={[50, 100]} tick={{ fontSize: 11 }} tickFormatter={v => `${v}%`} />
-                  <Tooltip formatter={(v) => `${v}%`} />
+                  <Tooltip content={<LineChartTooltip />} />
                   <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
                   {students.filter(s => visibleExamStudents.includes(s.id)).map((s, i) => (
                     <Line key={s.id} type="monotone" dataKey={s.name} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />
