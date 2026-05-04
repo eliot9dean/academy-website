@@ -134,6 +134,7 @@ export default function StaffStudentsPage() {
   const [classHistory]          = useTableData<ClassHistoryRecord>('classHistory');
   const [enrollmentMgmt]        = useTableData<EnrollmentMgmt>('enrollmentMgmt');
   const [classConfigsDB]        = useTableData<ClassConfig>('classConfigs');
+  const [textbooksDB]           = useTableData<{ id: string; name: string; fee: number }>('textbooks');
 
   // ── 파생 데이터 ─────────────────────────────────────────────
   const filtered = useMemo(() =>
@@ -211,15 +212,21 @@ export default function StaffStudentsPage() {
   const paymentStatusMap = useMemo(() => {
     const map: Record<string, {
       tuitionPaid: boolean;
-      latestMonth: string;   // 납부 대상 최신 월 (YYYY-MM)
-      textbookUnpaid: boolean;
+      tuitionDueDate: string;                    // 납부 기한 (기간 계산용)
+      unpaidTextbooks: { name: string; fee: number }[];  // 미납 교재 목록
       textbookPaid: boolean;
     }> = {};
 
-    // classConfig 기준 반별 교재 목록
+    // classConfig 반별 교재 목록
     const cfgByClass: Record<string, string[]> = {};
     for (const cfg of classConfigsDB) {
       cfgByClass[cfg.classId] = cfg.textbookIds ?? [];
+    }
+
+    // textbook ID → { name, fee } 룩업
+    const tbLookup: Record<string, { name: string; fee: number }> = {};
+    for (const tb of textbooksDB) {
+      tbLookup[tb.id] = { name: tb.name, fee: tb.fee };
     }
 
     // 학생별 그룹핑
@@ -231,52 +238,59 @@ export default function StaffStudentsPage() {
 
     for (const [sid, recs] of Object.entries(byStudent)) {
       // ── 수강료: 가장 최근 월 기준 ──────────────────────────────
-      const latestMonth = recs.reduce((max, r) => r.paymentMonth > max ? r.paymentMonth : max, '');
-      const latestRecs  = recs.filter(r => r.paymentMonth === latestMonth);
-      const tuitionPaid = latestRecs.every(r => r.tuitionPaid);
+      const latestMonth    = recs.reduce((max, r) => r.paymentMonth > max ? r.paymentMonth : max, '');
+      const latestRecs     = recs.filter(r => r.paymentMonth === latestMonth);
+      const tuitionPaid    = latestRecs.every(r => r.tuitionPaid);
+      const tuitionDueDate = latestRecs[0]?.tuitionDueDate ?? '';
 
-      // ── 교재비: 반별로 가장 최근 교재 데이터 레코드 기준 ───────
-      // (수강료 월과 교재 납부 월이 다를 수 있으므로 전체 이력 탐색)
-      let textbookUnpaid = false;
-      let textbookPaid   = false;
+      // ── 교재비: 미납 교재 목록 수집 ─────────────────────────────
+      const unpaidSet = new Map<string, { name: string; fee: number }>(); // key = 교재명(중복 제거)
+      let   anyTbPaid = false;
 
-      // 1) classConfig 신형 방식 — 최신 월 레코드에 textbookPayments 맵 확인
+      // 1) classConfig 신형 — 최신 월 레코드에서 textbookPayments 확인
       for (const r of latestRecs) {
         const tbIds = cfgByClass[r.classId] ?? [];
-        if (tbIds.length > 0) {
-          if (tbIds.some(id => !(r.textbookPayments?.[id]?.paid))) textbookUnpaid = true;
-          else if (tbIds.some(id => r.textbookPayments?.[id]?.paid))  textbookPaid   = true;
+        for (const tbId of tbIds) {
+          const paid = r.textbookPayments?.[tbId]?.paid ?? false;
+          const info = tbLookup[tbId];
+          if (!paid && info) unpaidSet.set(tbId, info);
+          if (paid)         anyTbPaid = true;
         }
-        // textbookPayments 직접 맵 확인
-        if (r.textbookPayments) {
-          const vals = Object.values(r.textbookPayments);
-          if (vals.some(p => !p.paid)) textbookUnpaid = true;
-          else if (vals.some(p => p.paid)) textbookPaid = true;
+        // textbookPayments 직접 맵 (classConfig 없이 직접 저장된 경우)
+        if (r.textbookPayments && tbIds.length === 0) {
+          for (const [tbId, p] of Object.entries(r.textbookPayments)) {
+            if (!p.paid && tbLookup[tbId]) unpaidSet.set(tbId, tbLookup[tbId]);
+            if (p.paid) anyTbPaid = true;
+          }
         }
       }
 
-      // 2) 구형 textbookFee 방식 — 반별로 가장 최근 교재 레코드 탐색
-      if (!textbookUnpaid && !textbookPaid) {
-        // 반별 최신 교재 레코드 (textbookFee가 있는 것)
+      // 2) 구형 textbookFee 방식 — classConfig 교재가 없을 때만 폴백
+      if (unpaidSet.size === 0 && !anyTbPaid) {
         const latestTbByClass: Record<string, EnrollmentMgmt> = {};
         for (const r of recs) {
           if (!r.textbookFee) continue;
           const prev = latestTbByClass[r.classId];
-          if (!prev || r.paymentMonth > prev.paymentMonth) {
-            latestTbByClass[r.classId] = r;
-          }
+          if (!prev || r.paymentMonth > prev.paymentMonth) latestTbByClass[r.classId] = r;
         }
         for (const r of Object.values(latestTbByClass)) {
-          if (r.textbookPaid) textbookPaid = true;
-          else if (!r.textbookNotPurchased) textbookUnpaid = true;
+          if (r.textbookPaid) {
+            anyTbPaid = true;
+          } else if (!r.textbookNotPurchased && r.textbookFee) {
+            unpaidSet.set(r.id, { name: r.textbookName ?? '교재', fee: r.textbookFee });
+          }
         }
-        if (textbookUnpaid) textbookPaid = false;
       }
 
-      map[sid] = { tuitionPaid, latestMonth, textbookUnpaid, textbookPaid };
+      map[sid] = {
+        tuitionPaid,
+        tuitionDueDate,
+        unpaidTextbooks: [...unpaidSet.values()],
+        textbookPaid: anyTbPaid && unpaidSet.size === 0,
+      };
     }
     return map;
-  }, [enrollmentMgmt, classConfigsDB]);
+  }, [enrollmentMgmt, classConfigsDB, textbooksDB]);
 
   // ── 납부 관련 핸들러 ────────────────────────────────────────
   const openEditPayment = () => {
@@ -406,7 +420,7 @@ export default function StaffStudentsPage() {
                   {(() => {
                     const st = paymentStatusMap[stu.id];
                     const tuUnpaid = st ? !st.tuitionPaid : !stu.tuitionPaid;
-                    const tbUnpaid = st?.textbookUnpaid ?? false;
+                    const tbUnpaid = (st?.unpaidTextbooks.length ?? 0) > 0;
                     if (!tuUnpaid && !tbUnpaid) return null;
                     return (
                       <div className="flex flex-col gap-0.5 items-end flex-shrink-0">
@@ -464,28 +478,36 @@ export default function StaffStudentsPage() {
                     {(() => {
                       const st = paymentStatusMap[selected.id];
                       const tuPaid = st ? st.tuitionPaid : selected.tuitionPaid;
-                      // YYYY-MM → "N월" 표시
-                      const monthLabel = st?.latestMonth
-                        ? `${parseInt(st.latestMonth.slice(5, 7))}월`
-                        : '';
+                      // 납부 기한으로 수강 기간 계산
+                      const period = st?.tuitionDueDate ? calcTuitionPeriod(st.tuitionDueDate) : null;
+                      const fmt = (d: string) => {
+                        const [, m, day] = d.split('-');
+                        return `${parseInt(m)}/${parseInt(day)}`;
+                      };
+                      const periodLabel = period ? `${fmt(period.start)} ~ ${fmt(period.end)}` : '';
                       return (
                         <span className={`text-xs px-2 py-0.5 rounded ${
                           tuPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                         }`}>
                           {tuPaid
-                            ? `수강료 납부${monthLabel ? ` (${monthLabel})` : ''}`
-                            : `수강료 미납${monthLabel ? ` (${monthLabel})` : ''}`}
+                            ? `수강료 납부${periodLabel ? ` (${periodLabel})` : ''}`
+                            : `수강료 미납${periodLabel ? ` (${periodLabel})` : ''}`}
                         </span>
                       );
                     })()}
                     {(() => {
                       const st = paymentStatusMap[selected.id];
                       if (!st) return null;
-                      if (st.textbookUnpaid) {
+                      // 미납 교재 목록
+                      if (st.unpaidTextbooks.length > 0) {
                         return (
-                          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
-                            교재비 미납
-                          </span>
+                          <>
+                            {st.unpaidTextbooks.map((tb, i) => (
+                              <span key={i} className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
+                                📚 {tb.name} {tb.fee.toLocaleString()}원 미납
+                              </span>
+                            ))}
+                          </>
                         );
                       }
                       if (st.textbookPaid) {
