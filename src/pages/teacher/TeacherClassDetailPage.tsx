@@ -90,10 +90,12 @@ const dateRelative = (days: number) => { const d = new Date(); d.setDate(d.getDa
 // 라인차트 공통 툴팁 — 반평균을 항상 마지막에 표시
 function LineChartTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
   if (!active || !payload || payload.length === 0) return null;
+  // 값 내림차순 정렬 (반평균 포함)
+  const sorted = [...payload].sort((a, b) => b.value - a.value);
   return (
     <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
       <p style={{ fontWeight: 600, marginBottom: 4, color: '#374151' }}>{label}</p>
-      {payload.map(p => {
+      {sorted.map(p => {
         const isAvg = p.name === '반평균';
         return (
           <div key={p.name} style={{
@@ -2998,7 +3000,8 @@ export default function TeacherClassDetailPage() {
             const examsWithFields = dbTestScores.filter(t =>
               t.classId === classId &&
               (t.type === 'weekly' || t.type === 'monthly') &&
-              Array.isArray(t.fields) && (t.fields as string[]).length > 0
+              Array.isArray(t.fields) && (t.fields as string[]).length > 0 &&
+              t.date <= selectedDate
             );
             if (examsWithFields.length === 0) return null;
 
