@@ -150,6 +150,17 @@ export default function AdminClassesPage() {
 
                   const isToday = (cls.days as string[]).includes(TODAY_DOW);
 
+                  // 현재 시각 vs 수업 시작 시각 비교 (분 단위)
+                  const nowMinutes = d.getHours() * 60 + d.getMinutes();
+                  const [startH, startM] = cls.startTime.split(':').map(Number);
+                  const classStartMinutes = startH * 60 + startM;
+                  const classStarted = isToday && nowMinutes >= classStartMinutes;
+
+                  // 출석 기록 존재 여부 (한 명이라도 체크됐으면 true)
+                  const hasAttendanceRecord =
+                    clsStudents.length > 0 &&
+                    clsStudents.some(s => clsAtt[s.id] !== undefined);
+
                   // 결석/지각/조퇴가 하나라도 있는지
                   const hasIssue = (['absent','late','early_leave'] as AttendanceStatus[])
                     .some(st => byStatus[st].length > 0);
@@ -204,23 +215,34 @@ export default function AdminClassesPage() {
                         <div className="rounded-lg px-3 py-2" style={{ background: '#F8FAFC', border: '1px solid #F1F5F9' }}>
                           <span className="text-xs font-bold" style={{ color: '#334155' }}>출석 현황: </span>
                           <span className="text-xs">
-                            {!hasIssue && (
-                              <span className="font-semibold" style={{ color: '#16A34A' }}>전원 출석</span>
+                            {/* ① 비수업일 */}
+                            {!isToday ? (
+                              <span className="font-semibold" style={{ color: '#CBD5E1' }}>—</span>
+                            ) : /* ② 수업 시작 전 */ !classStarted ? (
+                              <span className="font-semibold" style={{ color: '#94A3B8' }}>수업 전</span>
+                            ) : /* ③ 수업 시작했으나 출석체크 안 함 */ !hasAttendanceRecord ? (
+                              <span className="font-semibold" style={{ color: '#F97316' }}>출석체크 전</span>
+                            ) : /* ④ 출석 체크 완료 → 실제 현황 표시 */ (
+                              <>
+                                {!hasIssue && (
+                                  <span className="font-semibold" style={{ color: '#16A34A' }}>전원 출석</span>
+                                )}
+                                {(['absent','late','early_leave'] as AttendanceStatus[]).map(st => {
+                                  const names = byStatus[st];
+                                  if (names.length === 0) return null;
+                                  return (
+                                    <span key={st}>
+                                      <span style={{ color: '#64748B' }}>{ATT_LABEL[st]} </span>
+                                      <span className="font-bold" style={{ color: ATT_STYLE[st].text }}>
+                                        {names.length}명
+                                      </span>
+                                      <span style={{ color: '#94A3B8' }}>({names.join(', ')})</span>
+                                      <span style={{ color: '#CBD5E1' }}> · </span>
+                                    </span>
+                                  );
+                                })}
+                              </>
                             )}
-                            {(['absent','late','early_leave'] as AttendanceStatus[]).map(st => {
-                              const names = byStatus[st];
-                              if (names.length === 0) return null;
-                              return (
-                                <span key={st}>
-                                  <span style={{ color: '#64748B' }}>{ATT_LABEL[st]} </span>
-                                  <span className="font-bold" style={{ color: ATT_STYLE[st].text }}>
-                                    {names.length}명
-                                  </span>
-                                  <span style={{ color: '#94A3B8' }}>({names.join(', ')})</span>
-                                  <span style={{ color: '#CBD5E1' }}> · </span>
-                                </span>
-                              );
-                            })}
                           </span>
                         </div>
                       </div>
