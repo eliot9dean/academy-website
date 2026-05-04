@@ -682,9 +682,12 @@ export default function TeacherClassDetailPage() {
     const hwAll   = dbHomework.filter(r => r.classId === classId && r.studentId === s.id && radarDateFilter(r.date));
     const hwScore = hwAll.length > 0 ? Math.round(hwAll.reduce((sum, r) => sum + hwScoreMap[r.result], 0) / hwAll.length) : 0;
 
-    // 출석률: 기간 내 비율
+    // 출석 점수: 출석=100 / 조퇴=80 / 지각=60 / 결석=0, 기록 없는 날은 제외
+    const ATT_SCORE: Record<string, number> = { present: 100, early_leave: 80, late: 60, absent: 0 };
     const attAll   = dbAttendance.filter(a => a.classId === classId && a.studentId === s.id && radarAttDates.includes(a.date));
-    const attScore = radarAttDates.length > 0 ? Math.round(attAll.filter(a => a.status === 'present').length / radarAttDates.length * 100) : 0;
+    const attScore = attAll.length > 0
+      ? Math.round(attAll.reduce((sum, a) => sum + (ATT_SCORE[a.status] ?? 0), 0) / attAll.length)
+      : 0;
 
     return { name: s.name, color: COLORS[si % COLORS.length], axes: [
       { axis: '과제성실도', value: hwScore },
