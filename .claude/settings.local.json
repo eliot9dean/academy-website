@@ -72,7 +72,12 @@
       "Bash(curl -sv 'https://www.bomnal.net/ajax/calendar_data.cm?start=2026-04-01&end=2026-04-30&site_code=S20251218af4711b1403cb&board_no=1' -H 'Referer: https://www.bomnal.net/calendar' -H 'X-Requested-With: XMLHttpRequest' -H 'User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36')",
       "Bash(curl -s https://www.bomnal.net/ajax/calendar_data.cm -X POST -d 'board_code=b202604282b278728a1ac3&start=2026-04-01&end=2026-04-30' -H 'Referer: https://www.bomnal.net/calendar' -H 'X-Requested-With: XMLHttpRequest' -H 'Content-Type: application/x-www-form-urlencoded' -H 'User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36')",
       "Bash(curl -s https://www.bomnal.net/ajax/calendar_data.cm -X POST -d 'board_code=b202604282b278728a1ac3&start=2026-05-01&end=2026-05-31' -H 'Referer: https://www.bomnal.net/calendar' -H 'X-Requested-With: XMLHttpRequest' -H 'Content-Type: application/x-www-form-urlencoded' -H 'User-Agent: Mozilla/5.0')",
-      "Bash(curl -s https://www.bomnal.net/ajax/calendar_data.cm -X POST -d 'board_code=b202604282b278728a1ac3&start=2026-01-01&end=2026-12-31' -H 'Referer: https://www.bomnal.net/calendar' -H 'X-Requested-With: XMLHttpRequest' -H 'Content-Type: application/x-www-form-urlencoded' -H 'User-Agent: Mozilla/5.0')"
+      "Bash(curl -s https://www.bomnal.net/ajax/calendar_data.cm -X POST -d 'board_code=b202604282b278728a1ac3&start=2026-01-01&end=2026-12-31' -H 'Referer: https://www.bomnal.net/calendar' -H 'X-Requested-With: XMLHttpRequest' -H 'Content-Type: application/x-www-form-urlencoded' -H 'User-Agent: Mozilla/5.0')",
+      "Bash(xargs grep *)",
+      "Bash(gh run *)",
+      "Bash(node -e \"const today = new Date\\(\\); console.log\\('TODAY:', today.toISOString\\(\\).slice\\(0,10\\)\\); console.log\\('THIS_MONTH:', today.toISOString\\(\\).slice\\(0,7\\)\\);\")",
+      "Bash(xargs -I {} basename {})",
+      "Bash(grep \"\\\\.tsx$\")"
     ]
   }
 }

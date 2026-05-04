@@ -17,7 +17,7 @@ type Row = Record<string, any>;
 export const DB_LS_KEY      = 'ams_db_tables_v6';
 export const API_TOKEN_KEY  = 'ams_api_token';
 // 더미 데이터가 바뀔 때마다 올려주면 Supabase 강제 재업로드됨
-const SEED_VERSION = 6;
+const SEED_VERSION = 7;
 
 export const DB_INIT: Record<string, Row[]> = {
   users:          mockUsers.map(r => ({ ...r })),
@@ -57,10 +57,20 @@ function initDB(): Record<string, Row[]> {
     const raw = window.localStorage.getItem(DB_LS_KEY);
     if (raw) {
       const stored = JSON.parse(raw) as Record<string, Row[]>;
-      // 새 테이블이 추가된 경우 누락된 테이블 보충
+      // 새 테이블 보충 + 기존 테이블 내 누락 레코드(ID 기준) 보충
       let patched = false;
-      for (const [table, rows] of Object.entries(DB_INIT)) {
-        if (!stored[table]) { stored[table] = rows; patched = true; }
+      for (const [table, initRows] of Object.entries(DB_INIT)) {
+        if (!stored[table]) {
+          stored[table] = initRows;
+          patched = true;
+        } else {
+          const existingIds = new Set(stored[table].map((r: Row) => String(r.id ?? '')).filter(Boolean));
+          const toAdd = initRows.filter(r => r.id && !existingIds.has(String(r.id)));
+          if (toAdd.length > 0) {
+            stored[table] = [...stored[table], ...toAdd];
+            patched = true;
+          }
+        }
       }
       _db = stored;
       if (patched) window.localStorage.setItem(DB_LS_KEY, JSON.stringify(stored));

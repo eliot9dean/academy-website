@@ -5,7 +5,7 @@ import {
 import { useTableData } from '../../hooks/useTableData';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import type {
-  Student, ClassInfo, AttendanceRecord, TestScore, User, ClassHistoryRecord, EnrollmentMgmt,
+  Student, ClassInfo, AttendanceRecord, TestScore, User, ClassHistoryRecord, EnrollmentMgmt, ClassConfig,
 } from '../../types';
 
 // ── 상수 ────────────────────────────────────────────────────────
@@ -133,6 +133,7 @@ export default function StaffStudentsPage() {
   const [users]                 = useTableData<User>('users');
   const [classHistory]          = useTableData<ClassHistoryRecord>('classHistory');
   const [enrollmentMgmt]        = useTableData<EnrollmentMgmt>('enrollmentMgmt');
+  const [classConfigsDB]        = useTableData<ClassConfig>('classConfigs');
 
   // ── 파생 데이터 ─────────────────────────────────────────────
   const filtered = useMemo(() =>
@@ -210,6 +211,12 @@ export default function StaffStudentsPage() {
   const paymentStatusMap = useMemo(() => {
     const map: Record<string, { tuitionPaid: boolean; textbookUnpaid: boolean; textbookPaid: boolean }> = {};
 
+    // classConfig 기준 반별 교재 목록 (수강관리에서 설정된 것)
+    const cfgByClass: Record<string, string[]> = {};
+    for (const cfg of classConfigsDB) {
+      cfgByClass[cfg.classId] = cfg.textbookIds ?? [];
+    }
+
     // 학생별로 그룹핑
     const byStudent: Record<string, EnrollmentMgmt[]> = {};
     for (const r of enrollmentMgmt) {
@@ -224,9 +231,17 @@ export default function StaffStudentsPage() {
 
       const tuitionPaid = latestRecs.every(r => r.tuitionPaid);
 
-      // 교재비 미납: 신형(textbookPayments) + 구형(textbookFee/textbookPaid) 모두 검사
+      // 교재비 미납 판단:
+      // 1) 신형(textbookPayments 맵): 맵 내 미납 항목 존재
+      // 2) classConfig 교재 설정 기준: 반에 교재가 설정돼 있고 납부 기록 없거나 false이면 미납
+      // 3) 구형(textbookFee/textbookPaid): 금액 있고 미납이고 직접구매 아니면 미납
       const textbookUnpaid = latestRecs.some(r => {
+        // 1) 신형 맵 내 미납
         if (r.textbookPayments && Object.values(r.textbookPayments).some(p => !p.paid)) return true;
+        // 2) classConfig 기반 — 납부 기록이 없는 교재가 있으면 미납으로 간주
+        const tbIds = cfgByClass[r.classId] ?? [];
+        if (tbIds.length > 0 && tbIds.some(tbId => !(r.textbookPayments?.[tbId]?.paid))) return true;
+        // 3) 구형
         if (r.textbookFee && !r.textbookPaid && r.textbookNotPurchased === false) return true;
         return false;
       });
@@ -239,7 +254,7 @@ export default function StaffStudentsPage() {
       map[sid] = { tuitionPaid, textbookUnpaid, textbookPaid };
     }
     return map;
-  }, [enrollmentMgmt]);
+  }, [enrollmentMgmt, classConfigsDB]);
 
   // ── 납부 관련 핸들러 ────────────────────────────────────────
   const openEditPayment = () => {
