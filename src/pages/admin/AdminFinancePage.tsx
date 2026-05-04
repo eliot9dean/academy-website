@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, LabelList,
 } from 'recharts';
-import type { FinancialRecord, Student, ClassInfo, User, ConsultationRecord } from '../../types';
+import type { FinancialRecord, Student, ClassInfo, User, ConsultationRecord, FinanceMemo } from '../../types';
 
 type PeriodType = 'monthly' | 'quarterly' | 'semiannual' | 'annual';
 
@@ -105,7 +105,7 @@ export default function AdminFinancePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftEdit, setDraftEdit] = useState<Partial<FinancialRecord>>({});
 
-  const [memos, setMemos]           = useLocalStorage<{ date: string; text: string }[]>('ams_finance_memos', []);
+  const [memosDB, setMemosDB]           = useTableData<FinanceMemo>('financeMemos');
   const [showMemoList, setShowMemoList] = useState(false);
   const [newMemo, setNewMemo]           = useState('');
 
@@ -628,20 +628,20 @@ export default function AdminFinancePage() {
         <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 12 }}>
           <div className="flex items-center justify-between mb-2">
             <div className="text-[11px] font-semibold" style={{ color: '#94A3B8' }}>원장 메모</div>
-            {memos.length > 0 && (
+            {memosDB.length > 0 && (
               <button onClick={() => setShowMemoList(v => !v)} className="text-xs px-2.5 py-1 rounded-lg"
                 style={{ background: '#F1F5F9', color: '#64748B' }}>
-                메모 {memos.length}건 {showMemoList ? '▲' : '▼'}
+                메모 {memosDB.length}건 {showMemoList ? '▲' : '▼'}
               </button>
             )}
           </div>
-          {showMemoList && memos.length > 0 && (
+          {showMemoList && memosDB.length > 0 && (
             <div className="space-y-2 mb-3">
-              {memos.map((m, i) => (
-                <div key={i} className="rounded-lg px-3 py-2.5" style={{ background: '#F8FAFC', border: '1px solid #EEF2F7' }}>
+              {memosDB.map((m, i) => (
+                <div key={m.id} className="rounded-lg px-3 py-2.5" style={{ background: '#F8FAFC', border: '1px solid #EEF2F7' }}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[11px] font-semibold" style={{ color: '#94A3B8' }}>{m.date}</span>
-                    <button onClick={() => setMemos(prev => prev.filter((_, j) => j !== i))}
+                    <button onClick={() => setMemosDB(prev => prev.filter((_, j) => j !== i))}
                       className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: '#CBD5E1', background: '#FEF2F2' }}>✕</button>
                   </div>
                   <p className="text-sm whitespace-pre-wrap" style={{ color: '#334155', lineHeight: 1.7 }}>{m.text}</p>
@@ -656,13 +656,13 @@ export default function AdminFinancePage() {
               value={newMemo} onChange={e => setNewMemo(e.target.value)}
               onKeyDown={e => {
                 if (e.key === 'Enter' && e.ctrlKey && newMemo.trim()) {
-                  setMemos(prev => [{ date: new Date().toISOString().slice(0, 10), text: newMemo.trim() }, ...prev]);
+                  setMemosDB(prev => [{ id: `memo_${Date.now()}`, date: new Date().toISOString().slice(0, 10), text: newMemo.trim() }, ...prev]);
                   setNewMemo('');
                 }
               }} rows={3} />
             {newMemo.trim() && (
               <button
-                onClick={() => { setMemos(prev => [{ date: new Date().toISOString().slice(0, 10), text: newMemo.trim() }, ...prev]); setNewMemo(''); }}
+                onClick={() => { setMemosDB(prev => [{ id: `memo_${Date.now()}`, date: new Date().toISOString().slice(0, 10), text: newMemo.trim() }, ...prev]); setNewMemo(''); }}
                 className="absolute bottom-2 right-2 text-xs px-2.5 py-1 rounded-lg font-semibold"
                 style={{ background: '#4F46E5', color: '#fff' }}>저장</button>
             )}

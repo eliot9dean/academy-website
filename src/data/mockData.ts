@@ -2,7 +2,7 @@ import type {
   User, Student, ClassInfo, AttendanceRecord, DailyProgress,
   HomeworkResult, TestScore, ScheduleEvent, ConsultationRecord,
   FinancialRecord, DailyReportStatus, ClassHistoryRecord, EnrollmentMgmt,
-  ObservationRecord, Textbook,
+  ObservationRecord, Textbook, ClassConfig, ClassNotice, FinanceMemo, ClassSettings,
 } from '../types';
 
 // ─── USERS ────────────────────────────────────────────────────
@@ -924,6 +924,27 @@ export const mockEnrollmentMgmt: EnrollmentMgmt[] = [
   mkEM('em058','s15','c4','2025-09-01',null,'2026-03',310000,'2026-04-01',true,'2026-03-29',TB_CNY13),
   mkEM('em059','s15','c4','2025-09-01',null,'2026-04',310000,'2026-05-01',true),
 
+  // ─── 2026-05 수강관리 (모두 미납) ──────────────────────────────────────────
+  // c1 중1 영어 A반 (300,000/월)
+  mkEM('em060','s1', 'c1','2024-03-01',null,'2026-05',300000,'2026-06-01',false),
+  mkEM('em061','s2', 'c1','2024-06-01',null,'2026-05',300000,'2026-05-15',false),
+  mkEM('em062','s6', 'c1','2025-03-01',null,'2026-05',300000,'2026-06-01',false),
+  mkEM('em063','s9', 'c1','2026-01-10',null,'2026-05',300000,'2026-06-01',false),
+  mkEM('em064','s11','c1','2025-09-01',null,'2026-05',300000,'2026-06-01',false),
+  mkEM('em065','s15','c1','2025-09-01',null,'2026-05',300000,'2026-06-01',false),
+  // c2 중2 수학 B반 (320,000/월)
+  mkEM('em066','s3', 'c2','2025-03-01',null,'2026-05',320000,'2026-06-01',false),
+  mkEM('em067','s4', 'c2','2024-06-01',null,'2026-05',320000,'2026-06-01',false),
+  mkEM('em068','s12','c2','2026-02-01',null,'2026-05',320000,'2026-05-18',false),
+  // c3 중3 국어 C반 (280,000/월)
+  mkEM('em069','s1', 'c3','2024-09-01',null,'2026-05',280000,'2026-06-01',false),
+  mkEM('em070','s5', 'c3','2025-09-01',null,'2026-05',280000,'2026-05-20',false),
+  mkEM('em071','s10','c3','2025-09-01',null,'2026-05',280000,'2026-06-01',false),
+  mkEM('em072','s13','c3','2025-03-01',null,'2026-05',280000,'2026-06-01',false),
+  // c4 중1 수학 D반 (310,000/월)
+  mkEM('em073','s6', 'c4','2025-09-01',null,'2026-05',310000,'2026-06-01',false),
+  mkEM('em074','s15','c4','2025-09-01',null,'2026-05',310000,'2026-06-01',false),
+
   // ─── 2025년 이력 ─────────────────────────────────────────────
   ...em2025,
 
@@ -1029,3 +1050,9 @@ export const withdrawalStats = [
   { month: '2026-03', count: 1, reasons: { '성적부진': 1 },           teachers: { '이수진': 0, '박민호': 1, '최지혜': 0 }, grades: { '중1': 0, '중2': 1, '중3': 0 }, students: ['한예린'], teacherStudents: { '박민호': ['한예린'] } },
   { month: '2026-04', count: 0, reasons: {},                         teachers: { '이수진': 0, '박민호': 0, '최지혜': 0 }, grades: { '중1': 0, '중2': 0, '중3': 0 }, students: [], teacherStudents: {} },
 ];
+
+// ─── DB 관리 테이블 초기값 (빈 배열 — 실제 데이터는 사용자가 입력) ────────────
+export const mockClassConfigs: ClassConfig[] = [];
+export const mockClassNotices: ClassNotice[] = [];
+export const mockFinanceMemos: FinanceMemo[] = [];
+export const mockClassSettings: ClassSettings[] = [];

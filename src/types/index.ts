@@ -185,3 +185,34 @@ export interface DailyReportStatus {
   parentPhone: string;
   note?: string;
 }
+
+/** 반별 수강료·교재 설정 (DB 관리) */
+export interface ClassConfig {
+  id: string;         // = classId (반 당 1개)
+  classId: string;
+  tuitionFee: number;
+  textbookIds: string[];
+}
+
+/** 반별 공지사항 (DB 관리, 여러 개 가능) */
+export interface ClassNotice {
+  id: string;
+  classId: string;
+  text: string;
+}
+
+/** 재무 메모 (DB 관리) */
+export interface FinanceMemo {
+  id: string;
+  date: string;   // YYYY-MM-DD
+  text: string;
+}
+
+/** 반별 기타 설정 (시험분야, 출결 메시지, 성적표 코멘트) */
+export interface ClassSettings {
+  id: string;       // = classId
+  classId: string;
+  examFields: string[];                   // 시험 분야 목록
+  attMsgTemplates: Record<string, string>; // AttendanceStatus → 메시지 템플릿
+  reportComments: Record<string, string>;  // studentId → 코멘트
+}

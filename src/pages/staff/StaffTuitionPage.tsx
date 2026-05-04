@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { useTableData } from '../../hooks/useTableData';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
 import type { EnrollmentMgmt, Student, ClassInfo, Textbook, FinancialRecord } from '../../types';
 
 // ── 날짜 동적 계산 ─────────────────────────────────────────────
@@ -117,12 +116,12 @@ export default function StaffTuitionPage() {
 
   // ── 반별 기본 설정 ──────────────────────────────────────────
   const [showClassCfg, setShowClassCfg] = useState(false);
-  const [classCfgs,    setClassCfgs]    = useLocalStorage<ClassCfg[]>('ams_class_config_v2', []);
+  const [classConfigsDB, setClassConfigsDB] = useTableData<ClassCfg>('classConfigs');
 
   // ── 편의 조회 ───────────────────────────────────────────────
   const getStu = useCallback((id: string) => students.find(s => s.id === id), [students]);
   const getCls = useCallback((id: string) => classes.find(c => c.id === id), [classes]);
-  const getCfg = useCallback((cid: string) => classCfgs.find(c => c.classId === cid), [classCfgs]);
+  const getCfg = useCallback((cid: string) => classConfigsDB.find(c => c.classId === cid), [classConfigsDB]);
 
   // ── 학생별 최신 보유 교재 맵 ─────────────────────────────────
   const latestTBMap = useMemo(() => {
@@ -272,10 +271,10 @@ export default function StaffTuitionPage() {
 
   // ── 반별 설정 핸들러 ─────────────────────────────────────────
   const upsertCfg = (cid: string, patch: Partial<ClassCfg>) => {
-    setClassCfgs(prev => {
+    setClassConfigsDB(prev => {
       const ex = prev.find(c => c.classId === cid);
       if (ex) return prev.map(c => c.classId === cid ? { ...c, ...patch } : c);
-      return [...prev, { classId: cid, tuitionFee: 0, textbookIds: [], ...patch }];
+      return [...prev, { id: cid, classId: cid, tuitionFee: 0, textbookIds: [], ...patch }];
     });
   };
   const addTextbookToCfg = (cid: string, tbId: string) => {

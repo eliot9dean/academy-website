@@ -4,6 +4,7 @@ import {
   mockDailyProgress, mockHomeworkResults, mockTestScores,
   mockScheduleEvents, mockConsultations, mockFinancials, mockDailyReports,
   mockClassHistory, mockEnrollmentMgmt, mockObservations, mockTextbooks,
+  mockClassConfigs, mockClassNotices, mockFinanceMemos, mockClassSettings,
 } from '../data/mockData';
 import { API_URL, API_ENABLED, SUPABASE_ENABLED } from '../config/api';
 import {
@@ -13,10 +14,10 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
-export const DB_LS_KEY      = 'ams_db_tables_v5';
+export const DB_LS_KEY      = 'ams_db_tables_v6';
 export const API_TOKEN_KEY  = 'ams_api_token';
 // 더미 데이터가 바뀔 때마다 올려주면 Supabase 강제 재업로드됨
-const SEED_VERSION = 5;
+const SEED_VERSION = 6;
 
 export const DB_INIT: Record<string, Row[]> = {
   users:          mockUsers.map(r => ({ ...r })),
@@ -34,6 +35,10 @@ export const DB_INIT: Record<string, Row[]> = {
   classHistory:   mockClassHistory.map(r => ({ ...r })),
   enrollmentMgmt: mockEnrollmentMgmt.map(r => ({ ...r })),
   textbooks:      mockTextbooks.map(r => ({ ...r })),
+  classConfigs:   mockClassConfigs.map(r => ({ ...r })),
+  classNotices:   mockClassNotices.map(r => ({ ...r })),
+  financeMemos:   mockFinanceMemos.map(r => ({ ...r })),
+  classSettings:  mockClassSettings.map(r => ({ ...r })),
 };
 
 // ─── 모듈 레벨 전역 스토어 ─────────────────────────────────────────────────
@@ -48,8 +53,36 @@ let _lastUserWrite = 0; // 사용자가 마지막으로 데이터를 저장한 �
 function initDB(): Record<string, Row[]> {
   if (_db !== null) return _db;
   try {
+    // 현재 버전 키 먼저 시도
     const raw = window.localStorage.getItem(DB_LS_KEY);
-    _db = raw ? (JSON.parse(raw) as Record<string, Row[]>) : { ...DB_INIT };
+    if (raw) {
+      const stored = JSON.parse(raw) as Record<string, Row[]>;
+      // 새 테이블이 추가된 경우 누락된 테이블 보충
+      let patched = false;
+      for (const [table, rows] of Object.entries(DB_INIT)) {
+        if (!stored[table]) { stored[table] = rows; patched = true; }
+      }
+      _db = stored;
+      if (patched) window.localStorage.setItem(DB_LS_KEY, JSON.stringify(stored));
+    } else {
+      // 이전 버전(v5) 데이터 마이그레이션 시도
+      const PREV_KEY = 'ams_db_tables_v5';
+      const prevRaw = window.localStorage.getItem(PREV_KEY);
+      if (prevRaw) {
+        const oldData = JSON.parse(prevRaw) as Record<string, Row[]>;
+        const merged: Record<string, Row[]> = {};
+        for (const [table, initRows] of Object.entries(DB_INIT)) {
+          const existing = oldData[table] ?? [];
+          const existingIds = new Set(existing.map((r: Row) => String(r.id ?? '')).filter(Boolean));
+          const toAdd = initRows.filter(r => r.id && !existingIds.has(String(r.id)));
+          merged[table] = [...existing, ...toAdd];
+        }
+        _db = merged;
+        window.localStorage.setItem(DB_LS_KEY, JSON.stringify(merged));
+      } else {
+        _db = { ...DB_INIT };
+      }
+    }
   } catch {
     _db = { ...DB_INIT };
   }

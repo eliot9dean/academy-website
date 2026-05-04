@@ -11,6 +11,7 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import type {
   AttendanceStatus, HomeworkResult, ClassInfo, Student, User,
   AttendanceRecord, DailyProgress, TestScore, ObservationRecord,
+  ClassNotice, ClassSettings,
 } from '../../types';
 
 type Tab = 'attendance' | 'progress' | 'observation' | 'homework' | 'daily_test' | 'exam' | 'report_card' | 'charts';
@@ -124,6 +125,8 @@ export default function TeacherClassDetailPage() {
   const [dbHomework,   setDbHomework]       = useTableData<HomeworkResult>('homework');
   const [dbTestScores, setDbScores]         = useTableData<TestScore>('testScores');
   const [dbObservations, setDbObservations] = useTableData<ObservationRecord>('observations');
+  const [classNoticesDB, setClassNoticesDB] = useTableData<ClassNotice>('classNotices');
+  const [classSettingsDB, setClassSettingsDB] = useTableData<ClassSettings>('classSettings');
 
   const [activeTab,    setActiveTab]    = useState<Tab>('attendance');
   // 선택 날짜를 반별 localStorage에 저장 → 역할(선생님/원장) 관계없이 같은 날짜 유지
@@ -132,7 +135,23 @@ export default function TeacherClassDetailPage() {
   );
   const setSelectedDate = (d: string) => setSelectedDateRaw(d);
   const [notice,       setNotice]       = useState('');
-  const [savedNotices, setSavedNotices] = useLocalStorage<string[]>(`ams_notices_${classId}`, []);
+
+  // 현재 반의 공지사항 (DB 기반)
+  const savedNotices = classNoticesDB.filter(n => n.classId === classId).map(n => n.text);
+  const setSavedNotices = (updater: string[] | ((prev: string[]) => string[])) => {
+    setClassNoticesDB(prev => {
+      const others = prev.filter(n => n.classId !== classId);
+      const current = prev.filter(n => n.classId === classId).map(n => n.text);
+      const newTexts = typeof updater === 'function' ? updater(current) : updater;
+      const newNotices: ClassNotice[] = newTexts.map((text, i) => ({
+        id: `notice_${classId}_${i}`,
+        classId: classId!,
+        text,
+      }));
+      return [...others, ...newNotices];
+    });
+  };
+
   const [editingNoticeIdx, setEditingNoticeIdx] = useState<number | null>(null);
   const [editingNoticeText, setEditingNoticeText] = useState('');
 
@@ -140,22 +159,30 @@ export default function TeacherClassDetailPage() {
   const [calSubTab,      setCalSubTab]      = useState<AttCalTab>('calendar');
   const [calSelStudent,  setCalSelStudent]  = useState<string>('all');
 
-  // ── 출결 알림 메시지 템플릿 (반별 localStorage 저장) ─────────────────────────
+  // ── 출결 알림 메시지 템플릿 (DB 저장) ───────────────────────────────────────
   // 사용 가능한 변수: {이름} {날짜} {반명} {연락처}
   type AttMsgMap = Record<AttendanceStatus, string>;
-  const [attMsgTemplates, setAttMsgTemplates] = useLocalStorage<AttMsgMap>(
-    `ams_attMsg_v2_${classId}`,
-    {
-      present:
-        '안녕하세요! {이름} 학생이 {날짜} {반명} 수업에 정상 출석하였습니다. 오늘도 열심히 참여해 주어 감사합니다. 😊',
-      absent:
-        '안녕하세요. {이름} 학생이 {날짜} {반명} 수업에 결석 처리되었습니다. 사유가 있으신 경우 담당 선생님께 연락 주시기 바랍니다. 📞',
-      late:
-        '안녕하세요. {이름} 학생이 {날짜} {반명} 수업에 지각하였습니다. 다음부터는 제시간에 오실 수 있도록 지도 부탁드립니다. ⏰',
-      early_leave:
-        '안녕하세요. {이름} 학생이 {날짜} {반명} 수업 도중 조기 귀가하였습니다. 귀가 후 건강 상태를 확인해 주시기 바랍니다. 🏠',
-    },
-  );
+  const DEFAULT_ATT_MSG_TEMPLATES: AttMsgMap = {
+    present:
+      '안녕하세요! {이름} 학생이 {날짜} {반명} 수업에 정상 출석하였습니다. 오늘도 열심히 참여해 주어 감사합니다. 😊',
+    absent:
+      '안녕하세요. {이름} 학생이 {날짜} {반명} 수업에 결석 처리되었습니다. 사유가 있으신 경우 담당 선생님께 연락 주시기 바랍니다. 📞',
+    late:
+      '안녕하세요. {이름} 학생이 {날짜} {반명} 수업에 지각하였습니다. 다음부터는 제시간에 오실 수 있도록 지도 부탁드립니다. ⏰',
+    early_leave:
+      '안녕하세요. {이름} 학생이 {날짜} {반명} 수업 도중 조기 귀가하였습니다. 귀가 후 건강 상태를 확인해 주시기 바랍니다. 🏠',
+  };
+  const clsSetting = classSettingsDB.find(s => s.classId === classId);
+  const attMsgTemplates: AttMsgMap = { ...DEFAULT_ATT_MSG_TEMPLATES, ...(clsSetting?.attMsgTemplates ?? {}) } as AttMsgMap;
+  const setAttMsgTemplates = (updater: AttMsgMap | ((prev: AttMsgMap) => AttMsgMap)) => {
+    setClassSettingsDB(prev => {
+      const ex = prev.find(s => s.classId === classId);
+      const current: AttMsgMap = { ...DEFAULT_ATT_MSG_TEMPLATES, ...(ex?.attMsgTemplates ?? {}) } as AttMsgMap;
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      if (ex) return prev.map(s => s.classId === classId ? { ...s, attMsgTemplates: next } : s);
+      return [...prev, { id: classId!, classId: classId!, examFields: [], attMsgTemplates: next, reportComments: {} }];
+    });
+  };
   // 웹훅 URL (전역 저장)
   const [webhookUrl,     setWebhookUrl]     = useLocalStorage<string>('ams_webhook_url', '');
   const [webhookSending, setWebhookSending] = useState(false);
@@ -200,8 +227,17 @@ export default function TeacherClassDetailPage() {
   const [editExamScores,    setEditExamScores]    = useState<Record<string, string>>({});
   const [editExamSubScores, setEditExamSubScores] = useState<Record<string, Record<string, string>>>({});
   const [editExamMaxScore,  setEditExamMaxScore]  = useState('100');
-  // ── 시험 분야 ─────────────────────────────────────────────────────────────
-  const [examFields,     setExamFields]     = useLocalStorage<string[]>(`ams_examFields_${classId}`, []);
+  // ── 시험 분야 (DB 저장) ───────────────────────────────────────────────────
+  const examFields = clsSetting?.examFields ?? [];
+  const setExamFields = (updater: string[] | ((prev: string[]) => string[])) => {
+    setClassSettingsDB(prev => {
+      const ex = prev.find(s => s.classId === classId);
+      const current = ex?.examFields ?? [];
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      if (ex) return prev.map(s => s.classId === classId ? { ...s, examFields: next } : s);
+      return [...prev, { id: classId!, classId: classId!, examFields: next, attMsgTemplates: {}, reportComments: {} }];
+    });
+  };
   const [examFieldInput, setExamFieldInput] = useState('');
   const [examSubScores,  setExamSubScores]  = useState<Record<string, Record<string, string>>>({});
   const [editingFieldIdx,   setEditingFieldIdx]   = useState<number | null>(null);
@@ -211,7 +247,16 @@ export default function TeacherClassDetailPage() {
   // ── 성적표 ────────────────────────────────────────────────────────────────
   const [reportGenerated,  setReportGenerated]  = useState(false);
   const [reportChecked,    setReportChecked]    = useState<Record<string, boolean>>({});
-  const [reportComments,   setReportComments]   = useLocalStorage<Record<string, string>>(`ams_reportComment_${classId}`, {});
+  const reportComments = clsSetting?.reportComments ?? {};
+  const setReportComments = (updater: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
+    setClassSettingsDB(prev => {
+      const ex = prev.find(s => s.classId === classId);
+      const current = ex?.reportComments ?? {};
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      if (ex) return prev.map(s => s.classId === classId ? { ...s, reportComments: next } : s);
+      return [...prev, { id: classId!, classId: classId!, examFields: [], attMsgTemplates: {}, reportComments: next }];
+    });
+  };
   const [sendingReport,    setSendingReport]    = useState(false);
 
   // ── 학생 상세 모달 ─────────────────────────────────────────────────────────
