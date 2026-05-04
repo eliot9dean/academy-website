@@ -3119,28 +3119,42 @@ export default function TeacherClassDetailPage() {
                   )}
                 </div>
 
-                {/* 분야별 점수 추이 (반 평균) */}
-                {fieldTrendData.length >= 2 && (
-                  <div className="card p-4">
-                    <h3 className="font-semibold text-gray-800 mb-1">분야별 점수 추이 (반 평균)</h3>
-                    <p className="text-xs text-gray-400 mb-3">날짜별 각 분야 반 평균 점수 추이</p>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <LineChart data={fieldTrendData} margin={{ left: -10 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                        <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={v => `${v}점`} />
-                        <Tooltip formatter={(v) => `${v}점`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                        <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                        {allFields.map((f, fi) => (
-                          <Line key={f} type="monotone" dataKey={f}
-                            stroke={COLORS[fi % COLORS.length]} strokeWidth={2}
-                            dot={{ r: 3 }} activeDot={{ r: 5 }}
-                          />
-                        ))}
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
+                {/* 분야별 학생 점수 비교 (선택 시험일 기준) */}
+                {studentFieldRadar.length > 0 && (() => {
+                  const fieldBarData = allFields.map(f => {
+                    const row: Record<string, string | number> = { field: f };
+                    students.forEach(s => {
+                      const exam = examsWithFields.find(t => t.studentId === s.id && t.date === selFieldDate);
+                      if (exam) {
+                        const perMax = exam.maxScore / ((exam.fields as string[]).length || 1);
+                        row[s.name] = (exam.subScores as Record<string, number>)?.[f] != null
+                          ? Math.round((exam.subScores as Record<string, number>)[f] / perMax * 100)
+                          : 0;
+                      } else {
+                        row[s.name] = 0;
+                      }
+                    });
+                    return row;
+                  });
+                  return (
+                    <div className="card p-4">
+                      <h3 className="font-semibold text-gray-800 mb-1">분야별 학생 점수 비교</h3>
+                      <p className="text-xs text-gray-400 mb-3">{selFieldDate} 시험 기준 · 분야별 학생 점수 (100점 환산)</p>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={fieldBarData} margin={{ left: -10 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="field" tick={{ fontSize: 11 }} />
+                          <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={v => `${v}점`} />
+                          <Tooltip formatter={(v) => `${v}점`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                          <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                          {students.map((s, i) => (
+                            <Bar key={s.id} dataKey={s.name} fill={COLORS[i % COLORS.length]} radius={[3, 3, 0, 0]} />
+                          ))}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  );
+                })()}
               </>
             );
           })()}
