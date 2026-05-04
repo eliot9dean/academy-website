@@ -24,6 +24,7 @@ const navByRole: Record<UserRole, NavItem[]> = {
   staff: [
     { to: '/staff/students',   label: '학생 정보',      icon: '👤' },
     { to: '/staff/tuition',    label: '수강 관리',      icon: '📒' },
+    { to: '/staff/textbooks',  label: '교재 관리',      icon: '📚' },
     { to: '/staff/enrollment', label: '재원/퇴원 관리', icon: '📋' },
     { to: '/staff/finance',    label: '재무 관리',      icon: '💰' },
   ],

@@ -24,6 +24,7 @@ import StaffStudentsPage from './pages/staff/StaffStudentsPage';
 import StaffTuitionPage from './pages/staff/StaffTuitionPage';
 import StaffEnrollmentPage from './pages/staff/StaffEnrollmentPage';
 import StaffFinancePage from './pages/staff/StaffFinancePage';
+import StaffTextbookPage from './pages/staff/StaffTextbookPage';
 
 // Parent
 import ParentDashboardPage from './pages/parent/ParentDashboardPage';
@@ -60,6 +61,7 @@ function AppRoutes() {
             <Route index element={<Navigate to="/staff/students" replace />} />
             <Route path="students"   element={<StaffStudentsPage />} />
             <Route path="tuition"    element={<StaffTuitionPage />} />
+            <Route path="textbooks"  element={<StaffTextbookPage />} />
             <Route path="enrollment" element={<StaffEnrollmentPage />} />
             <Route path="finance"    element={<StaffFinancePage />} />
           </Route>

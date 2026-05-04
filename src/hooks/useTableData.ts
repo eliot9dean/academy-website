@@ -3,7 +3,7 @@ import {
   mockUsers, mockStudents, mockClasses, mockAttendance,
   mockDailyProgress, mockHomeworkResults, mockTestScores,
   mockScheduleEvents, mockConsultations, mockFinancials, mockDailyReports,
-  mockClassHistory, mockEnrollmentMgmt, mockObservations,
+  mockClassHistory, mockEnrollmentMgmt, mockObservations, mockTextbooks,
 } from '../data/mockData';
 import { API_URL, API_ENABLED, SUPABASE_ENABLED } from '../config/api';
 import {
@@ -33,6 +33,7 @@ export const DB_INIT: Record<string, Row[]> = {
   dailyReports:   mockDailyReports.map(r => ({ ...r })),
   classHistory:   mockClassHistory.map(r => ({ ...r })),
   enrollmentMgmt: mockEnrollmentMgmt.map(r => ({ ...r })),
+  textbooks:      mockTextbooks.map(r => ({ ...r })),
 };
 
 // ─── 모듈 레벨 전역 스토어 ─────────────────────────────────────────────────

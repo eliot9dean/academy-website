@@ -2,7 +2,7 @@ import type {
   User, Student, ClassInfo, AttendanceRecord, DailyProgress,
   HomeworkResult, TestScore, ScheduleEvent, ConsultationRecord,
   FinancialRecord, DailyReportStatus, ClassHistoryRecord, EnrollmentMgmt,
-  ObservationRecord,
+  ObservationRecord, Textbook,
 } from '../types';
 
 // ─── USERS ────────────────────────────────────────────────────
@@ -995,6 +995,18 @@ export const mockObservations: ObservationRecord[] = [
   // c4 중1 수학 D반 — s6 강수아
   { id: 'ob08', classId: 'c4', studentId: 's6', date: '2026-04-08', note: '방정식 풀이 과정에서 실수가 잦음. 풀이 단계를 꼼꼼히 쓰도록 지도함.', parentNote: '수학 오답노트 작성을 권장합니다.' },
   { id: 'ob09', classId: 'c4', studentId: 's15', date: '2026-04-15', note: '개념 이해도가 높아짐. 응용 문제도 도전해보도록 격려함.', parentNote: '심화 문제집을 병행하면 좋겠습니다.' },
+];
+
+// ─── TEXTBOOKS ────────────────────────────────────────────────
+export const mockTextbooks: Textbook[] = [
+  { id: 'tb1', name: 'Grammar in Use Intermediate',       publisher: 'Cambridge',   price: 35000, subject: '영어' },
+  { id: 'tb2', name: 'Grammar in Use Upper-Intermediate', publisher: 'Cambridge',   price: 38000, subject: '영어' },
+  { id: 'tb3', name: 'Grammar in Use Elementary',         publisher: 'Cambridge',   price: 32000, subject: '영어' },
+  { id: 'tb4', name: 'Vocabulary Power',                  publisher: 'Build & Grow', price: 12000, subject: '영어' },
+  { id: 'tb5', name: 'RPM 수학 중2',                      publisher: '에듀왕',      price: 18000, subject: '수학' },
+  { id: 'tb6', name: '쎈 수학 중2',                       publisher: 'NE능률',      price: 18000, subject: '수학' },
+  { id: 'tb7', name: '중학국어 비문학독해',                 publisher: '미래엔',      price: 16000, subject: '국어' },
+  { id: 'tb8', name: '1등급 만들기 국어',                  publisher: 'NE능률',      price: 14000, subject: '국어' },
 ];
 
 // ─── WITHDRAWAL STATS ─────────────────────────────────────────

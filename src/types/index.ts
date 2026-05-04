@@ -143,6 +143,8 @@ export interface EnrollmentMgmt {
   textbookPaidDate?: string;
   /** true = 학생 개인 구매 (학원 미구매) */
   textbookNotPurchased?: boolean;
+  /** 반별 교재 목록 기반 납부 이력 (textbookId → paid 여부) */
+  textbookPayments?: Record<string, { paid: boolean; paidDate?: string }>;
 
   memo?: string;
 }
@@ -164,6 +166,14 @@ export interface FinancialRecord {
   date: string;
   description: string;
   studentId?: string;
+}
+
+export interface Textbook {
+  id: string;
+  name: string;
+  publisher?: string;
+  price: number;
+  subject?: string; // '영어' | '수학' | '국어' 등
 }
 
 export interface DailyReportStatus {

@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { useTableData } from '../../hooks/useTableData';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import type { EnrollmentMgmt, Student, ClassInfo } from '../../types';
+import type { EnrollmentMgmt, Student, ClassInfo, Textbook } from '../../types';
 
 // ── 날짜 동적 계산 ─────────────────────────────────────────────
 const _now = new Date();
@@ -53,15 +53,8 @@ function getTBStatus(r: EnrollmentMgmt): TBStatus {
   return 'not_purchased';
 }
 
-const TB_STATUS_CLS: Record<TBStatus, string> = {
-  paid:          'bg-green-50 border-green-200 text-green-700',
-  unpaid:        'bg-orange-50 border-orange-200 text-orange-600',
-  not_purchased: 'bg-gray-50 border-gray-200 text-gray-400',
-};
-
 // ── 반별 설정 타입 ─────────────────────────────────────────────
-interface ClassTBCfg { name: string; publisher: string; fee: number }
-interface ClassCfg   { classId: string; tuitionFee: number; textbooks: ClassTBCfg[] }
+interface ClassCfg { classId: string; tuitionFee: number; textbookIds: string[] }
 
 // ── 최신 교재 정보 타입 ────────────────────────────────────────
 type TBInfo = { name: string; pub?: string; fee: number; status: TBStatus; paidDate?: string; month: string; srcId: string };
@@ -101,6 +94,7 @@ export default function StaffTuitionPage() {
   const [records, setRecords] = useTableData<EnrollmentMgmt>('enrollmentMgmt');
   const [students]            = useTableData<Student>('students');
   const [classes]             = useTableData<ClassInfo>('classes');
+  const [textbooks]           = useTableData<Textbook>('textbooks');
 
   // ── 필터 상태 ───────────────────────────────────────────────
   const [selMonth,     setSelMonth]     = useState('2026-04');
@@ -122,8 +116,7 @@ export default function StaffTuitionPage() {
 
   // ── 반별 기본 설정 ──────────────────────────────────────────
   const [showClassCfg, setShowClassCfg] = useState(false);
-  const [classCfgs,    setClassCfgs]    = useLocalStorage<ClassCfg[]>('ams_class_config', []);
-  const [addTBForm,    setAddTBForm]    = useState<Record<string, ClassTBCfg>>({});
+  const [classCfgs,    setClassCfgs]    = useLocalStorage<ClassCfg[]>('ams_class_config_v2', []);
 
   // ── 편의 조회 ───────────────────────────────────────────────
   const getStu = useCallback((id: string) => students.find(s => s.id === id), [students]);
@@ -180,7 +173,7 @@ export default function StaffTuitionPage() {
         if (a.tuitionPaid !== b.tuitionPaid) return a.tuitionPaid ? 1 : -1;
         return a.studentId.localeCompare(b.studentId);
       });
-  }, [records, inPeriod, selClass, tuFilt, tbFilt, search, getStu, latestTBMap]);
+  }, [records, inPeriod, selClass, tuFilt, tbFilt, search, getStu]);
 
   // ── 통계 ────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -254,20 +247,29 @@ export default function StaffTuitionPage() {
     setClassCfgs(prev => {
       const ex = prev.find(c => c.classId === cid);
       if (ex) return prev.map(c => c.classId === cid ? { ...c, ...patch } : c);
-      return [...prev, { classId: cid, tuitionFee: 0, textbooks: [], ...patch }];
+      return [...prev, { classId: cid, tuitionFee: 0, textbookIds: [], ...patch }];
     });
   };
-  const addTextbookToCfg = (cid: string) => {
-    const f = addTBForm[cid];
-    if (!f?.name) return;
-    upsertCfg(cid, { textbooks: [...(getCfg(cid)?.textbooks ?? []), f] });
-    setAddTBForm(prev => ({ ...prev, [cid]: { name: '', publisher: '', fee: 0 } }));
+  const addTextbookToCfg = (cid: string, tbId: string) => {
+    const ids = getCfg(cid)?.textbookIds ?? [];
+    if (ids.includes(tbId)) return;
+    upsertCfg(cid, { textbookIds: [...ids, tbId] });
   };
   const removeTBFromCfg = (cid: string, idx: number) => {
-    const tbs = [...(getCfg(cid)?.textbooks ?? [])];
-    tbs.splice(idx, 1);
-    upsertCfg(cid, { textbooks: tbs });
+    const ids = [...(getCfg(cid)?.textbookIds ?? [])];
+    ids.splice(idx, 1);
+    upsertCfg(cid, { textbookIds: ids });
   };
+
+  // ── 교재 납부 토글 ────────────────────────────────────────────
+  const toggleTextbook = useCallback((rowId: string, textbookId: string, paid: boolean) => {
+    setRecords(prev => prev.map(r => {
+      if (r.id !== rowId) return r;
+      const payments = { ...(r.textbookPayments ?? {}) };
+      payments[textbookId] = { paid, paidDate: paid ? TODAY : undefined };
+      return { ...r, textbookPayments: payments };
+    }));
+  }, [setRecords]);
 
   // ── 렌더링 ──────────────────────────────────────────────────
   return (
@@ -311,8 +313,7 @@ export default function StaffTuitionPage() {
           <h2 className="text-sm font-bold text-gray-700 mb-3">⚙️ 반별 기본 수강료 · 교재 설정</h2>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {classes.map(cls => {
-              const cfg   = getCfg(cls.id);
-              const addFm = addTBForm[cls.id] ?? { name: '', publisher: '', fee: 0 };
+              const cfg = getCfg(cls.id);
               const clsColor = cls.id === 'c1' ? '#6366f1' : cls.id === 'c2' ? '#0ea5e9'
                 : cls.id === 'c3' ? '#10b981' : '#f59e0b';
               return (
@@ -329,36 +330,42 @@ export default function StaffTuitionPage() {
                       onChange={e => upsertCfg(cls.id, { tuitionFee: Number(e.target.value) })} />
                     <span className="text-xs text-gray-400">원/월</span>
                   </div>
+                  {/* 교재 섹션 */}
                   <div className="mb-2">
-                    <div className="text-xs font-medium text-gray-500 mb-1.5">교재 목록</div>
-                    {(cfg?.textbooks ?? []).length === 0 && (
-                      <p className="text-xs text-gray-300 mb-1">등록된 교재 없음</p>
+                    <div className="text-xs font-medium text-gray-500 mb-1.5">📚 교재 목록</div>
+                    {(cfg?.textbookIds ?? []).length === 0 && (
+                      <p className="text-xs text-gray-300 mb-1.5">등록된 교재 없음</p>
                     )}
-                    {(cfg?.textbooks ?? []).map((tb, i) => (
-                      <div key={i} className="flex items-center gap-2 mb-1 text-xs">
-                        <span className="flex-1 truncate text-gray-700">{tb.name}</span>
-                        <span className="text-gray-400">{tb.publisher}</span>
-                        <span className="text-indigo-600 font-medium">{won(tb.fee)}</span>
-                        <button onClick={() => removeTBFromCfg(cls.id, i)}
-                          className="text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-1 mt-2">
-                    <input className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-indigo-300"
-                      placeholder="교재명" value={addFm.name}
-                      onChange={e => setAddTBForm(p => ({ ...p, [cls.id]: { ...addFm, name: e.target.value } }))} />
-                    <input className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-indigo-300"
-                      placeholder="출판사" value={addFm.publisher}
-                      onChange={e => setAddTBForm(p => ({ ...p, [cls.id]: { ...addFm, publisher: e.target.value } }))} />
-                    <input type="number"
-                      className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-indigo-300"
-                      placeholder="가격" value={addFm.fee || ''}
-                      onChange={e => setAddTBForm(p => ({ ...p, [cls.id]: { ...addFm, fee: Number(e.target.value) } }))} />
-                    <button onClick={() => addTextbookToCfg(cls.id)}
-                      className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700">
-                      + 추가
-                    </button>
+                    {(cfg?.textbookIds ?? []).map((tbId, i) => {
+                      const tb = textbooks.find(t => t.id === tbId);
+                      if (!tb) return null;
+                      return (
+                        <div key={tbId} className="flex items-center gap-2 mb-1 text-xs bg-gray-50 rounded-lg px-2 py-1.5">
+                          <span className="flex-1 font-medium text-gray-700">{tb.name}</span>
+                          {tb.publisher && <span className="text-gray-400">{tb.publisher}</span>}
+                          <span className="text-indigo-600 font-semibold">{tb.price.toLocaleString()}원</span>
+                          <button onClick={() => removeTBFromCfg(cls.id, i)}
+                            className="text-red-400 hover:text-red-600 flex-shrink-0 ml-1">✕</button>
+                        </div>
+                      );
+                    })}
+                    {/* 교재 선택 드롭다운 */}
+                    <select
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-300 bg-white"
+                      value=""
+                      onChange={e => { if (e.target.value) addTextbookToCfg(cls.id, e.target.value); }}>
+                      <option value="">+ 교재 선택하여 추가...</option>
+                      {textbooks
+                        .filter(t => !(cfg?.textbookIds ?? []).includes(t.id))
+                        .map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}{t.publisher ? ` (${t.publisher})` : ''} — {t.price.toLocaleString()}원
+                          </option>
+                        ))}
+                    </select>
+                    {textbooks.length === 0 && (
+                      <p className="text-[10px] text-orange-400 mt-1">※ 교재 관리 메뉴에서 교재를 먼저 등록해주세요</p>
+                    )}
                   </div>
                 </div>
               );
@@ -485,7 +492,7 @@ export default function StaffTuitionPage() {
       </div>
 
       <div className="text-[11px] text-gray-400 mb-2 flex items-center gap-1">
-        <span>💡</span><span>수강료·교재명·교재비·메모 셀을 클릭하면 바로 수정할 수 있습니다</span>
+        <span>💡</span><span>수강료·납부기한·메모 셀을 클릭하면 바로 수정할 수 있습니다</span>
       </div>
 
       {/* ── 테이블 ── */}
@@ -500,36 +507,18 @@ export default function StaffTuitionPage() {
                 <th className="text-right px-4 py-3 font-semibold text-gray-500 text-xs">수강료</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs">납부 기한</th>
                 <th className="text-center px-4 py-3 font-semibold text-gray-500 text-xs">수강료 납부</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs">교재명</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-500 text-xs">교재비</th>
-                <th className="text-center px-4 py-3 font-semibold text-gray-500 text-xs">교재 납부</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs">교재</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs">메모</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.length === 0 ? (
-                <tr><td colSpan={10} className="text-center py-12 text-gray-300 text-sm">해당 조건의 수강 기록이 없습니다</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-gray-300 text-sm">해당 조건의 수강 기록이 없습니다</td></tr>
               ) : filtered.map(r => {
                 const stu      = getStu(r.studentId);
                 const cls      = getCls(r.classId);
                 const clsColor = r.classId === 'c1' ? '#6366f1' : r.classId === 'c2' ? '#0ea5e9'
                   : r.classId === 'c3' ? '#10b981' : '#f59e0b';
-                const tbKey  = `${r.studentId}_${r.classId}`;
-                const ownTB  = !!(r.textbookName && r.textbookFee);
-                const ltb    = latestTBMap[tbKey];
-                const tbName = ownTB ? r.textbookName! : ltb?.name;
-                const tbPub  = ownTB ? r.textbookPublisher : ltb?.pub;
-                const tbFeeV = ownTB ? r.textbookFee!  : ltb?.fee;
-                // ★ 교재 납부 상태: 반드시 이 행 자신의 필드만 읽음
-                //    (ltb?.status 폴백 사용 시 같은 student+class 행 전체가
-                //     같은 latestTBMap 값을 바라봐 일괄변경됨)
-                const tbStat: TBStatus = r.textbookPaid
-                  ? 'paid'
-                  : r.textbookNotPurchased === false
-                    ? 'unpaid'
-                    : 'not_purchased'; // 기본값
-                const tbPDate = r.textbookPaidDate;
-                const tbMonth = ownTB ? undefined : ltb?.month;
 
                 // 셀 편집 활성 여부
                 const ec = (col: string) => editCell?.id === r.id && editCell.col === col;
@@ -599,61 +588,55 @@ export default function StaffTuitionPage() {
                       </button>
                     </td>
 
-                    {/* 교재명 — 클릭 편집 */}
-                    <td className="px-4 py-3">
-                      {ec('textbookName') ? (
-                        <CellInput value={editCell!.val} placeholder="교재명"
-                          onChange={updateCellVal} onCommit={commitCell} onCancel={cancelCell} />
-                      ) : tbName ? (
-                        <div onClick={() => startCellEdit(r.id, 'textbookName', r.textbookName ?? tbName)}
-                          className="cursor-pointer hover:bg-indigo-50 rounded px-0.5 transition-colors" title="클릭하여 수정">
-                          <div className={`text-xs truncate max-w-[140px] ${ownTB ? 'font-medium text-gray-700' : 'text-gray-400'}`}>
-                            {tbName}
-                          </div>
-                          <div className="text-[10px] text-gray-400">
-                            {tbPub}{tbMonth && <span className="text-gray-300"> · {tbMonth} 구매</span>}
-                          </div>
-                        </div>
-                      ) : (
-                        <span onClick={() => startCellEdit(r.id, 'textbookName', '')}
-                          className="text-gray-300 text-xs cursor-pointer hover:text-indigo-400 transition-colors" title="클릭하여 입력">
-                          — 입력
-                        </span>
-                      )}
-                    </td>
+                    {/* 교재 */}
+                    <td className="px-4 py-3 min-w-[200px]">
+                      {(() => {
+                        const cfg = getCfg(r.classId);
+                        const cfgTbs = (cfg?.textbookIds ?? []).map(id => textbooks.find(t => t.id === id)).filter(Boolean) as Textbook[];
 
-                    {/* 교재비 — 클릭 편집 */}
-                    <td className="px-4 py-3 text-right">
-                      {ec('textbookFee') ? (
-                        <CellInput type="number" value={editCell!.val} placeholder="교재비" alignRight
-                          onChange={updateCellVal} onCommit={commitCell} onCancel={cancelCell} />
-                      ) : tbFeeV ? (
-                        <span onClick={() => startCellEdit(r.id, 'textbookFee', r.textbookFee ?? tbFeeV)}
-                          className={`text-xs font-medium cursor-pointer hover:text-indigo-600 hover:underline transition-colors ${ownTB ? 'text-gray-600' : 'text-gray-400'}`}>
-                          {won(tbFeeV)}
-                        </span>
-                      ) : (
-                        <span onClick={() => startCellEdit(r.id, 'textbookFee', '')}
-                          className="text-gray-300 text-xs cursor-pointer hover:text-indigo-400 transition-colors">—</span>
-                      )}
-                    </td>
+                        if (cfgTbs.length === 0) {
+                          // backward compat: 기존 단일 교재 데이터 표시
+                          if (r.textbookName) {
+                            const paid = r.textbookPaid ?? false;
+                            return (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs text-gray-600 truncate max-w-[120px]">{r.textbookName}</span>
+                                {r.textbookFee && <span className="text-[10px] text-gray-400">{r.textbookFee.toLocaleString()}원</span>}
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${
+                                  paid ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+                                }`}>{paid ? '✓납부' : '미구매'}</span>
+                              </div>
+                            );
+                          }
+                          return <span className="text-gray-300 text-xs">—</span>;
+                        }
 
-                    {/* 교재 납부 — 드롭다운 (현재 행만 업데이트) */}
-                    <td className="px-4 py-3 text-center">
-                      <div>
-                        <select
-                          value={tbStat}
-                          onChange={e => setTBStatus(r.id, e.target.value as TBStatus)}
-                          className={`text-xs font-semibold px-2 py-1 rounded-lg border cursor-pointer focus:outline-none appearance-none ${TB_STATUS_CLS[tbStat]}`}
-                        >
-                          <option value="paid">✓ 납부</option>
-                          <option value="unpaid">✗ 미납</option>
-                          <option value="not_purchased">— 미구매</option>
-                        </select>
-                        {tbPDate && tbStat === 'paid' && (
-                          <div className="text-[10px] text-green-400 mt-0.5">{tbPDate}</div>
-                        )}
-                      </div>
+                        return (
+                          <div className="space-y-1.5">
+                            {cfgTbs.map(tb => {
+                              const payment = r.textbookPayments?.[tb.id];
+                              const paid = payment?.paid ?? false;
+                              const paidDate = payment?.paidDate;
+                              return (
+                                <div key={tb.id} className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-xs text-gray-700 font-medium truncate max-w-[110px]" title={tb.name}>{tb.name}</span>
+                                  <span className="text-[10px] text-gray-400 flex-shrink-0">{tb.price.toLocaleString()}원</span>
+                                  <button
+                                    onClick={() => toggleTextbook(r.id, tb.id, !paid)}
+                                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 transition-all ${
+                                      paid
+                                        ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                                        : 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100'
+                                    }`}>
+                                    {paid ? '✓납부' : '✗미납'}
+                                  </button>
+                                  {paid && paidDate && <span className="text-[9px] text-green-400 flex-shrink-0">{paidDate}</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     {/* 메모 — 클릭 편집 */}
