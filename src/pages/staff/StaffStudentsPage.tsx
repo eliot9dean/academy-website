@@ -207,17 +207,22 @@ export default function StaffStudentsPage() {
 
   const tuitionPeriod = selected ? calcTuitionPeriod(selected.tuitionDueDate) : null;
 
-  /** enrollmentMgmt 기반 학생별 납부 상태 맵 (각 학생의 가장 최근 paymentMonth 기준) */
+  /** enrollmentMgmt 기반 학생별 납부 상태 맵 */
   const paymentStatusMap = useMemo(() => {
-    const map: Record<string, { tuitionPaid: boolean; textbookUnpaid: boolean; textbookPaid: boolean }> = {};
+    const map: Record<string, {
+      tuitionPaid: boolean;
+      latestMonth: string;   // 납부 대상 최신 월 (YYYY-MM)
+      textbookUnpaid: boolean;
+      textbookPaid: boolean;
+    }> = {};
 
-    // classConfig 기준 반별 교재 목록 (수강관리에서 설정된 것)
+    // classConfig 기준 반별 교재 목록
     const cfgByClass: Record<string, string[]> = {};
     for (const cfg of classConfigsDB) {
       cfgByClass[cfg.classId] = cfg.textbookIds ?? [];
     }
 
-    // 학생별로 그룹핑
+    // 학생별 그룹핑
     const byStudent: Record<string, EnrollmentMgmt[]> = {};
     for (const r of enrollmentMgmt) {
       if (!byStudent[r.studentId]) byStudent[r.studentId] = [];
@@ -225,33 +230,50 @@ export default function StaffStudentsPage() {
     }
 
     for (const [sid, recs] of Object.entries(byStudent)) {
-      // 가장 최근 paymentMonth의 records만 사용
+      // ── 수강료: 가장 최근 월 기준 ──────────────────────────────
       const latestMonth = recs.reduce((max, r) => r.paymentMonth > max ? r.paymentMonth : max, '');
       const latestRecs  = recs.filter(r => r.paymentMonth === latestMonth);
-
       const tuitionPaid = latestRecs.every(r => r.tuitionPaid);
 
-      // 교재비 미납 판단:
-      // 1) 신형(textbookPayments 맵): 맵 내 미납 항목 존재
-      // 2) classConfig 교재 설정 기준: 반에 교재가 설정돼 있고 납부 기록 없거나 false이면 미납
-      // 3) 구형(textbookFee/textbookPaid): 금액 있고 미납이고 직접구매 아니면 미납
-      const textbookUnpaid = latestRecs.some(r => {
-        // 1) 신형 맵 내 미납
-        if (r.textbookPayments && Object.values(r.textbookPayments).some(p => !p.paid)) return true;
-        // 2) classConfig 기반 — 납부 기록이 없는 교재가 있으면 미납으로 간주
-        const tbIds = cfgByClass[r.classId] ?? [];
-        if (tbIds.length > 0 && tbIds.some(tbId => !(r.textbookPayments?.[tbId]?.paid))) return true;
-        // 3) 구형
-        if (r.textbookFee && !r.textbookPaid && r.textbookNotPurchased === false) return true;
-        return false;
-      });
-      const textbookPaid = latestRecs.some(r => {
-        if (r.textbookPayments && Object.values(r.textbookPayments).some(p => p.paid)) return true;
-        if (r.textbookFee && r.textbookPaid) return true;
-        return false;
-      }) && !textbookUnpaid;
+      // ── 교재비: 반별로 가장 최근 교재 데이터 레코드 기준 ───────
+      // (수강료 월과 교재 납부 월이 다를 수 있으므로 전체 이력 탐색)
+      let textbookUnpaid = false;
+      let textbookPaid   = false;
 
-      map[sid] = { tuitionPaid, textbookUnpaid, textbookPaid };
+      // 1) classConfig 신형 방식 — 최신 월 레코드에 textbookPayments 맵 확인
+      for (const r of latestRecs) {
+        const tbIds = cfgByClass[r.classId] ?? [];
+        if (tbIds.length > 0) {
+          if (tbIds.some(id => !(r.textbookPayments?.[id]?.paid))) textbookUnpaid = true;
+          else if (tbIds.some(id => r.textbookPayments?.[id]?.paid))  textbookPaid   = true;
+        }
+        // textbookPayments 직접 맵 확인
+        if (r.textbookPayments) {
+          const vals = Object.values(r.textbookPayments);
+          if (vals.some(p => !p.paid)) textbookUnpaid = true;
+          else if (vals.some(p => p.paid)) textbookPaid = true;
+        }
+      }
+
+      // 2) 구형 textbookFee 방식 — 반별로 가장 최근 교재 레코드 탐색
+      if (!textbookUnpaid && !textbookPaid) {
+        // 반별 최신 교재 레코드 (textbookFee가 있는 것)
+        const latestTbByClass: Record<string, EnrollmentMgmt> = {};
+        for (const r of recs) {
+          if (!r.textbookFee) continue;
+          const prev = latestTbByClass[r.classId];
+          if (!prev || r.paymentMonth > prev.paymentMonth) {
+            latestTbByClass[r.classId] = r;
+          }
+        }
+        for (const r of Object.values(latestTbByClass)) {
+          if (r.textbookPaid) textbookPaid = true;
+          else if (!r.textbookNotPurchased) textbookUnpaid = true;
+        }
+        if (textbookUnpaid) textbookPaid = false;
+      }
+
+      map[sid] = { tuitionPaid, latestMonth, textbookUnpaid, textbookPaid };
     }
     return map;
   }, [enrollmentMgmt, classConfigsDB]);
@@ -442,11 +464,17 @@ export default function StaffStudentsPage() {
                     {(() => {
                       const st = paymentStatusMap[selected.id];
                       const tuPaid = st ? st.tuitionPaid : selected.tuitionPaid;
+                      // YYYY-MM → "N월" 표시
+                      const monthLabel = st?.latestMonth
+                        ? `${parseInt(st.latestMonth.slice(5, 7))}월`
+                        : '';
                       return (
                         <span className={`text-xs px-2 py-0.5 rounded ${
                           tuPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                         }`}>
-                          {tuPaid ? '수강료 납부' : '수강료 미납'}
+                          {tuPaid
+                            ? `수강료 납부${monthLabel ? ` (${monthLabel})` : ''}`
+                            : `수강료 미납${monthLabel ? ` (${monthLabel})` : ''}`}
                         </span>
                       );
                     })()}
