@@ -45,12 +45,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      // 기존 세션 복원
+      // 기존 세션 복원 + 항상 Supabase 동기화 (데모 모드 포함)
       supabaseGetCurrentUser().then(user => {
-        if (user) {
-          setCurrentUser(user);
-          syncFromAPI().catch(() => {});
-        }
+        if (user) setCurrentUser(user);
+        syncFromAPI().catch(() => {}); // 세션 유무와 무관하게 항상 동기화
       });
 
       return () => subscription.unsubscribe();

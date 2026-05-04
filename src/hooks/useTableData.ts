@@ -40,6 +40,8 @@ let _db: Record<string, Row[]> | null = null;
 const _listeners = new Set<() => void>();
 let _apiSynced = false;   // 이 세션에서 API 동기화가 완료됐는지 여부
 let _realtimeUnsubscribe: (() => void) | null = null; // Supabase Realtime 구독 해제 함수
+let _pollingInterval: ReturnType<typeof setInterval> | null = null; // 폴링 인터벌
+let _lastUserWrite = 0; // 사용자가 마지막으로 데이터를 저장한 타임스탬프
 
 /** localStorage에서 DB를 읽어 캐시 초기화 (최초 1회) */
 function initDB(): Record<string, Row[]> {
@@ -143,13 +145,30 @@ export async function syncFromAPI(): Promise<void> {
       }
       _apiSynced = true;
 
-      // Realtime 구독 시작 (중복 방지)
+      // Realtime 구독 시작 (중복 방지) — postgres_changes requires REPLICA IDENTITY FULL
       if (!_realtimeUnsubscribe) {
         _realtimeUnsubscribe = supabaseSubscribeChanges((tableName, rows) => {
           if (tableName === '_seed_version') return; // 버전 메타는 무시
           const db = getDB();
           writeDB({ ...db, [tableName]: rows });
         });
+      }
+
+      // 30초 폴링 백업 (Realtime이 동작하지 않을 때 대비)
+      if (!_pollingInterval) {
+        _pollingInterval = setInterval(async () => {
+          // 사용자가 최근 10초 내 저장한 경우 스킵 (진행 중인 편집 덮어쓰기 방지)
+          if (Date.now() - _lastUserWrite < 10_000) return;
+          try {
+            const serverData = await supabaseGetAll();
+            if (!serverData) return;
+            const { _seed_version: _sv, ...serverLocal } = serverData;
+            // 로컬과 서버 데이터가 다를 때만 갱신
+            if (JSON.stringify(getDB()) !== JSON.stringify(serverLocal)) {
+              writeDB(serverLocal);
+            }
+          } catch { /* 무시 */ }
+        }, 30_000); // 30초마다
       }
     } catch { /* 무시 */ }
     return;
@@ -277,9 +296,10 @@ export function useDB(): [
     (updater: Record<string, Row[]> | ((prev: Record<string, Row[]>) => Record<string, Row[]>)) => {
       const current = getDB();
       const next = typeof updater === 'function' ? updater(current) : updater;
+      _lastUserWrite = Date.now(); // 사용자 직접 저장 시각 기록
       writeDB(next);
       // useDB는 테이블 단위를 알 수 없으므로 변경된 테이블 전체 업로드
-      if (API_ENABLED) {
+      if (API_ENABLED || SUPABASE_ENABLED) {
         for (const [tbl, rows] of Object.entries(next)) {
           if (JSON.stringify(current[tbl]) !== JSON.stringify(rows)) {
             saveTableToAPI(tbl, rows).catch(() => {});
@@ -314,6 +334,7 @@ export function useTableData<T extends Row = Row>(
       const db = getDB();
       const current = (db[tableId] ?? []) as T[];
       const newRows = typeof updater === 'function' ? updater(current) : updater;
+      _lastUserWrite = Date.now(); // 사용자 직접 저장 시각 기록
       writeDB({ ...db, [tableId]: newRows });
       // API / Supabase 모드: 서버에도 비동기 저장 (best-effort)
       if (API_ENABLED || SUPABASE_ENABLED) {
