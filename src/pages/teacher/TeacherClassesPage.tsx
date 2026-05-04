@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTableData } from '../../hooks/useTableData';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
 import type { ClassInfo, Student, AttendanceRecord } from '../../types';
 
 const DAY_ORDER = ['월', '화', '수', '목', '금', '토', '일'];
@@ -35,12 +34,11 @@ export default function TeacherClassesPage() {
   const effectiveUser = viewAsUser ?? currentUser;
   const navigate = useNavigate();
   const [colorPickerFor, setColorPickerFor] = useState<string | null>(null);
-  const [cardColors, setCardColors] = useLocalStorage<Record<string, number>>('ams_class_card_colors', {});
 
   const d = new Date();
   const TODAY = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  const [classes]    = useTableData<ClassInfo>('classes');
+  const [classes, setClasses] = useTableData<ClassInfo>('classes');
   const [students]   = useTableData<Student>('students');
   const [attendance] = useTableData<AttendanceRecord>('attendance');
 
@@ -64,7 +62,7 @@ export default function TeacherClassesPage() {
               return { student: s, status: att?.status ?? null };
             }).filter(r => r.student);
             const absentList = records.filter(r => r.status === 'absent');
-            const palIdx = cardColors[cls.id] ?? 0;
+            const palIdx = cls.cardColorIdx ?? 0;
             const pal = CARD_PALETTES[palIdx];
 
             return (
@@ -118,7 +116,7 @@ export default function TeacherClassesPage() {
                     <div className="grid grid-cols-9 gap-1 mb-1.5">
                       {CARD_PALETTES.slice(0, 9).map((p, i) => (
                         <button key={i}
-                          onClick={() => { setCardColors(prev => ({ ...prev, [cls.id]: i })); setColorPickerFor(null); }}
+                          onClick={() => { setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, cardColorIdx: i } : c)); setColorPickerFor(null); }}
                           className="w-6 h-6 rounded-md border-2 transition-all hover:scale-110"
                           style={{ background: p.bg, borderColor: palIdx === i ? '#4F46E5' : p.border }}
                           title={p.name}
@@ -129,7 +127,7 @@ export default function TeacherClassesPage() {
                     <div className="grid grid-cols-9 gap-1">
                       {CARD_PALETTES.slice(9).map((p, i) => (
                         <button key={i + 9}
-                          onClick={() => { setCardColors(prev => ({ ...prev, [cls.id]: i + 9 })); setColorPickerFor(null); }}
+                          onClick={() => { setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, cardColorIdx: i + 9 } : c)); setColorPickerFor(null); }}
                           className="w-6 h-6 rounded-md border-2 transition-all hover:scale-110"
                           style={{ background: p.bg, borderColor: palIdx === i + 9 ? '#4F46E5' : p.border }}
                           title={p.name}

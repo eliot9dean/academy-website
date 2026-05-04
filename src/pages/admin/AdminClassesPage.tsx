@@ -91,7 +91,6 @@ export default function AdminClassesPage() {
     initAtt(),
   );
 
-  const [cardColors] = useLocalStorage<Record<string, number>>('ams_class_card_colors', {});
 
   const teachers = users
     .filter(u => u.role === 'teacher')
@@ -165,7 +164,7 @@ export default function AdminClassesPage() {
                   const hasIssue = (['absent','late','early_leave'] as AttendanceStatus[])
                     .some(st => byStatus[st].length > 0);
 
-                  const palIdx = cardColors[cls.id] ?? 0;
+                  const palIdx = cls.cardColorIdx ?? 0;
                   const pal = CARD_PALETTES[palIdx] ?? CARD_PALETTES[0];
 
                   return (

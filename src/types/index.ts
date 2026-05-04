@@ -50,6 +50,7 @@ export interface ClassInfo {
   endTime: string;      // '18:00'
   studentIds: string[];
   grade: string;
+  cardColorIdx?: number; // 카드 색상 팔레트 인덱스 (Supabase 동기화)
 }
 
 export interface DailyProgress {
