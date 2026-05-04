@@ -3,15 +3,23 @@ import { useTableData } from '../../hooks/useTableData';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import type { EnrollmentMgmt, Student, ClassInfo } from '../../types';
 
-const TODAY = '2026-04-23';
+// ── 날짜 동적 계산 ─────────────────────────────────────────────
+const _now = new Date();
+const TODAY = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
 const THIS_MONTH = TODAY.slice(0, 7);
 
 // ── 유틸 ──────────────────────────────────────────────────────
 const won = (n: number) => n.toLocaleString('ko-KR') + '원';
-const MONTHS = ['2026-04', '2026-03', '2026-02', '2026-01'];
-const MONTH_LABELS: Record<string, string> = {
-  '2026-04': '4월', '2026-03': '3월', '2026-02': '2월', '2026-01': '1월',
-};
+
+// 최근 4개월 동적 생성
+const MONTHS: string[] = [];
+const MONTH_LABELS: Record<string, string> = {};
+for (let i = 0; i < 4; i++) {
+  const md = new Date(_now.getFullYear(), _now.getMonth() - i, 1);
+  const key = `${md.getFullYear()}-${String(md.getMonth() + 1).padStart(2, '0')}`;
+  MONTHS.push(key);
+  MONTH_LABELS[key] = `${md.getMonth() + 1}월`;
+}
 
 type PeriodPreset = 'this' | '3m' | '6m' | '1y' | 'all';
 const PERIOD_BTNS: { v: PeriodPreset; l: string }[] = [
@@ -141,11 +149,17 @@ export default function StaffTuitionPage() {
   // ── 수강시작일 기준 기간 집합 ────────────────────────────────
   const startMonthSet = useMemo(() => startMonthsInRange(periodPreset, THIS_MONTH), [periodPreset]);
 
+  // ── 납부월 기준 기간 필터 함수 ──────────────────────────────
+  const inPeriod = useCallback((paymentMonth: string) => {
+    if (periodPreset === 'all') return true;
+    if (periodPreset === 'this') return paymentMonth === selMonth;
+    return startMonthSet?.has(paymentMonth) ?? true;
+  }, [periodPreset, selMonth, startMonthSet]);
+
   // ── 필터링 ──────────────────────────────────────────────────
   const filtered = useMemo(() => {
     return records
-      .filter(r => !startMonthSet || startMonthSet.has(r.enrollStartDate.slice(0, 7)))
-      .filter(r => periodPreset !== 'this' || r.paymentMonth === selMonth)
+      .filter(r => inPeriod(r.paymentMonth))
       .filter(r => selClass === 'all' || r.classId === selClass)
       .filter(r => tuFilt === 'all' || (tuFilt === 'paid' ? r.tuitionPaid : !r.tuitionPaid))
       .filter(r => {
@@ -162,14 +176,15 @@ export default function StaffTuitionPage() {
       .filter(r => !search || (getStu(r.studentId)?.name ?? '').includes(search))
       .sort((a, b) => {
         if (a.classId !== b.classId) return a.classId.localeCompare(b.classId);
+        if (a.paymentMonth !== b.paymentMonth) return a.paymentMonth.localeCompare(b.paymentMonth);
         if (a.tuitionPaid !== b.tuitionPaid) return a.tuitionPaid ? 1 : -1;
         return a.studentId.localeCompare(b.studentId);
       });
-  }, [records, startMonthSet, periodPreset, selMonth, selClass, tuFilt, tbFilt, search, getStu, latestTBMap]);
+  }, [records, inPeriod, selClass, tuFilt, tbFilt, search, getStu, latestTBMap]);
 
   // ── 통계 ────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const m       = records.filter(r => !startMonthSet || startMonthSet.has(r.enrollStartDate.slice(0, 7)));
+    const m       = records.filter(r => inPeriod(r.paymentMonth));
     const totalTu = m.reduce((s, r) => s + r.tuitionFee, 0);
     const paidTu  = m.filter(r => r.tuitionPaid).reduce((s, r) => s + r.tuitionFee, 0);
     const unpaidCnt = m.filter(r => !r.tuitionPaid).length;
@@ -179,7 +194,7 @@ export default function StaffTuitionPage() {
     const unpaidTb = tbVals.filter(t => t.status === 'unpaid').reduce((s, t) => s + t.fee, 0);
     const unpaidTbCnt = tbVals.filter(t => t.status === 'unpaid').length;
     return { totalTu, paidTu, unpaidTu: totalTu - paidTu, unpaidCnt, totalTb, paidTb, unpaidTb, unpaidTbCnt };
-  }, [records, startMonthSet, latestTBMap]);
+  }, [records, inPeriod, latestTBMap]);
 
   // ── 수강료 납부 토글 ─────────────────────────────────────────
   const toggleTuition = useCallback((id: string) => {
@@ -266,7 +281,7 @@ export default function StaffTuitionPage() {
         <div className="flex flex-col items-end gap-2">
           {/* 기간 선택 (수강시작일 기준) */}
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-400 font-medium">수강시작일 기준</span>
+            <span className="text-[10px] text-gray-400 font-medium">납부월 기준</span>
             <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
               {PERIOD_BTNS.map(({ v, l }) => (
                 <button key={v} onClick={() => setPeriodPreset(v)}
@@ -370,7 +385,7 @@ export default function StaffTuitionPage() {
           <div className="text-xs text-gray-400 mb-1">총 수강료 ({PERIOD_LABEL[periodPreset]})</div>
           <div className="text-xl font-bold text-gray-800">{won(stats.totalTu)}</div>
           <div className="text-xs text-gray-400 mt-1">
-            {records.filter(r => !startMonthSet || startMonthSet.has(r.enrollStartDate.slice(0, 7))).length}건
+            {records.filter(r => inPeriod(r.paymentMonth)).length}건
           </div>
         </div>
         <div className="card p-4">
