@@ -1005,8 +1005,18 @@ export const mockTextbooks: Textbook[] = [
   { id: 'tb4', name: 'Vocabulary Power',                  publisher: 'Build & Grow', price: 12000, subject: '영어' },
   { id: 'tb5', name: 'RPM 수학 중2',                      publisher: '에듀왕',      price: 18000, subject: '수학' },
   { id: 'tb6', name: '쎈 수학 중2',                       publisher: 'NE능률',      price: 18000, subject: '수학' },
-  { id: 'tb7', name: '중학국어 비문학독해',                 publisher: '미래엔',      price: 16000, subject: '국어' },
-  { id: 'tb8', name: '1등급 만들기 국어',                  publisher: 'NE능률',      price: 14000, subject: '국어' },
+  { id: 'tb7',  name: '중학국어 비문학독해',                 publisher: '미래엔',      price: 16000, subject: '국어' },
+  { id: 'tb8',  name: '1등급 만들기 국어',                  publisher: 'NE능률',      price: 14000, subject: '국어' },
+  { id: 'tb9',  name: 'Reading Explorer 2',               publisher: 'National Geographic', price: 22000, subject: '영어' },
+  { id: 'tb10', name: 'This Is Grammar 중급',              publisher: '넥서스',       price: 13000, subject: '영어' },
+  { id: 'tb11', name: '수학의 정석 중2',                    publisher: '성문출판사',  price: 15000, subject: '수학' },
+  { id: 'tb12', name: '개념원리 수학 중2',                  publisher: '개념원리',    price: 16000, subject: '수학' },
+  { id: 'tb13', name: '최상위 수학 중3',                    publisher: '디딤돌',      price: 17000, subject: '수학' },
+  { id: 'tb14', name: '자이스토리 영어 독해',               publisher: '수경출판사',  price: 13000, subject: '영어' },
+  { id: 'tb15', name: '중학 과학 탐구',                     publisher: '천재교육',    price: 14000, subject: '과학' },
+  { id: 'tb16', name: '중학 사회 개념완성',                  publisher: '미래엔',      price: 13000, subject: '사회' },
+  { id: 'tb17', name: 'EBS 중학 영문법 총정리',             publisher: 'EBS',         price: 10000, subject: '영어' },
+  { id: 'tb18', name: '고등 수학 기본서',                    publisher: '교학사',      price: 20000, subject: '수학' },
 ];
 
 // ─── WITHDRAWAL STATS ─────────────────────────────────────────
