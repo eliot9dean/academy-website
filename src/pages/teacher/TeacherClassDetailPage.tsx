@@ -3044,23 +3044,6 @@ export default function TeacherClassDetailPage() {
               return { name: s.name, color: COLORS[si % COLORS.length], axes };
             }).filter(Boolean) as { name: string; color: string; axes: { axis: string; value: number }[] }[];
 
-            // 날짜별 분야 반평균 추이
-            const fieldDates = [...new Set(examsWithFields.map(t => t.date))].sort();
-            const fieldTrendData = fieldDates.map(date => {
-              const row: Record<string, string | number> = { date: date.slice(5) };
-              const testsOnDate = examsWithFields.filter(t => t.date === date);
-              allFields.forEach(f => {
-                const vals = testsOnDate
-                  .filter(t => (t.subScores as Record<string,number>)?.[f] != null)
-                  .map(t => {
-                    const perMax = t.maxScore / ((t.fields as string[]).length || 1);
-                    return Math.round((t.subScores as Record<string,number>)[f] / perMax * 100);
-                  });
-                row[f] = vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
-              });
-              return row;
-            });
-
             return (
               <>
                 {/* 분야별 성취도 방사형 */}
