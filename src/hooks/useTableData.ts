@@ -80,6 +80,30 @@ if (typeof window !== 'undefined') {
   });
 }
 
+/** Supabase에서 최신 데이터를 가져와 로컬 DB를 갱신 (폴링·포커스 공용) */
+async function pollFromSupabase(): Promise<void> {
+  if (!_apiSynced) return; // 초기 동기화 전에는 실행하지 않음
+  if (Date.now() - _lastUserWrite < 10_000) return; // 사용자가 최근 저장했으면 스킵
+  try {
+    const serverData = await supabaseGetAll();
+    if (!serverData) return;
+    const { _seed_version: _sv, ...serverLocal } = serverData;
+    if (JSON.stringify(getDB()) !== JSON.stringify(serverLocal)) {
+      writeDB(serverLocal);
+    }
+  } catch { /* 무시 */ }
+}
+
+/** 창/탭이 포커스될 때 즉시 Supabase에서 동기화 (cross-browser 즉시 반영) */
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') pollFromSupabase();
+  });
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', () => pollFromSupabase());
+}
+
 // ─── API 헬퍼 ──────────────────────────────────────────────────────────────
 
 /** 저장된 API 토큰 반환 */
@@ -154,21 +178,9 @@ export async function syncFromAPI(): Promise<void> {
         });
       }
 
-      // 30초 폴링 백업 (Realtime이 동작하지 않을 때 대비)
+      // 15초 폴링 백업 (Realtime이 동작하지 않을 때 대비)
       if (!_pollingInterval) {
-        _pollingInterval = setInterval(async () => {
-          // 사용자가 최근 10초 내 저장한 경우 스킵 (진행 중인 편집 덮어쓰기 방지)
-          if (Date.now() - _lastUserWrite < 10_000) return;
-          try {
-            const serverData = await supabaseGetAll();
-            if (!serverData) return;
-            const { _seed_version: _sv, ...serverLocal } = serverData;
-            // 로컬과 서버 데이터가 다를 때만 갱신
-            if (JSON.stringify(getDB()) !== JSON.stringify(serverLocal)) {
-              writeDB(serverLocal);
-            }
-          } catch { /* 무시 */ }
-        }, 30_000); // 30초마다
+        _pollingInterval = setInterval(() => { pollFromSupabase(); }, 15_000);
       }
     } catch { /* 무시 */ }
     return;
@@ -229,7 +241,11 @@ async function uploadAllToSupabase(db: Record<string, Row[]>): Promise<void> {
 async function saveTableToAPI(tableName: string, rows: Row[]): Promise<void> {
   // Supabase 모드
   if (SUPABASE_ENABLED) {
-    try { await supabaseSaveTable(tableName, rows); } catch { /* 무시 */ }
+    try {
+      await supabaseSaveTable(tableName, rows);
+    } catch (err) {
+      console.error(`[AMS] Supabase 저장 실패 (${tableName}):`, err);
+    }
     return;
   }
   // PHP 모드

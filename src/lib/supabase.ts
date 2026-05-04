@@ -106,9 +106,13 @@ export async function supabaseGetAll(): Promise<Record<string, Row[]> | null> {
 
 // ── 테이블 저장 (upsert) ──────────────────────────────────────────────────────
 export async function supabaseSaveTable(tableName: string, rows: Row[]): Promise<void> {
-  await supabase
+  const { error } = await supabase
     .from('ams_tables')
     .upsert({ name: tableName, data: rows }, { onConflict: 'name' });
+  if (error) {
+    console.error(`[AMS] supabaseSaveTable(${tableName}) error:`, error.message, error.code);
+    throw error;
+  }
 }
 
 // ── 회원가입 (승인 대기 방식) ─────────────────────────────────────────────────
