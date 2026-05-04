@@ -200,6 +200,8 @@ export default function TeacherClassDetailPage() {
   const [chartDailyEnd,      setChartDailyEnd]      = useState('');
   const [chartExamStart,     setChartExamStart]     = useState('');
   const [chartExamEnd,       setChartExamEnd]       = useState('');
+  // 방사형 그래프 기간 필터: 'month'=선택월, '3m'=최근3개월, 'all'=전체
+  const [radarPeriod, setRadarPeriod] = useState<'month' | '3m' | 'all'>('month');
 
   const cls = dbClasses.find(c => c.id === classId);
   const students = cls
@@ -628,17 +630,47 @@ export default function TeacherClassDetailPage() {
     });
   })();
 
+  // 방사형 그래프 기간 필터 기준 날짜 계산
+  const radarDateFilter = (() => {
+    if (radarPeriod === 'month') return (date: string) => date.startsWith(currentMonth);
+    if (radarPeriod === '3m') {
+      const d3m = new Date(selectedDate);
+      d3m.setMonth(d3m.getMonth() - 3);
+      const cutoff = d3m.toISOString().slice(0, 10);
+      return (date: string) => date >= cutoff && date <= selectedDate;
+    }
+    return (_date: string) => true; // 'all' — 전체
+  })();
+
+  // 출석률 기준 날짜 목록 (방사형 기간에 맞춰 재계산)
+  const radarAttDates = (() => {
+    if (radarPeriod === 'month') return classDatesThisMonth;
+    const DAY_MAP2: Record<string, number> = { 일:0, 월:1, 화:2, 수:3, 목:4, 금:5, 토:6 };
+    const start = radarPeriod === '3m'
+      ? (() => { const d = new Date(selectedDate); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0,10); })()
+      : (cls ? [...dbAttendance.filter(a => a.classId === classId).map(a => a.date)].sort()[0] ?? selectedDate : selectedDate);
+    const end   = selectedDate;
+    const result: string[] = [];
+    const cur = new Date(start);
+    while (cur.toISOString().slice(0,10) <= end) {
+      const dateStr = cur.toISOString().slice(0,10);
+      if ((cls?.days as string[])?.some(day => DAY_MAP2[day] === cur.getDay())) result.push(dateStr);
+      cur.setDate(cur.getDate() + 1);
+    }
+    return result;
+  })();
+
   const radarData = students.map((s, si) => {
-    const hwAll    = dbHomework.filter(r => r.classId === classId && r.studentId === s.id);
+    const hwAll    = dbHomework.filter(r => r.classId === classId && r.studentId === s.id && radarDateFilter(r.date));
     const hwScore  = hwAll.length > 0 ? Math.round(hwAll.reduce((sum, r) => sum + hwScoreMap[r.result], 0) / hwAll.length) : 0;
-    const dailyAll = dbTestScores.filter(t => t.classId === classId && t.studentId === s.id && t.type === 'daily');
+    const dailyAll = dbTestScores.filter(t => t.classId === classId && t.studentId === s.id && t.type === 'daily' && radarDateFilter(t.date));
     const dailyAvg = dailyAll.length > 0 ? Math.round(dailyAll.reduce((sum, t) => sum + t.score / t.maxScore * 100, 0) / dailyAll.length) : 0;
-    const weekAll  = dbTestScores.filter(t => t.classId === classId && t.studentId === s.id && t.type === 'weekly');
+    const weekAll  = dbTestScores.filter(t => t.classId === classId && t.studentId === s.id && t.type === 'weekly' && radarDateFilter(t.date));
     const weekAvg  = weekAll.length > 0 ? Math.round(weekAll.reduce((sum, t) => sum + t.score / t.maxScore * 100, 0) / weekAll.length) : 0;
-    const monAll   = dbTestScores.filter(t => t.classId === classId && t.studentId === s.id && t.type === 'monthly');
+    const monAll   = dbTestScores.filter(t => t.classId === classId && t.studentId === s.id && t.type === 'monthly' && radarDateFilter(t.date));
     const monAvg   = monAll.length > 0 ? Math.round(monAll.reduce((sum, t) => sum + t.score / t.maxScore * 100, 0) / monAll.length) : 0;
-    const attAll   = dbAttendance.filter(a => a.classId === classId && a.studentId === s.id && classDatesThisMonth.includes(a.date));
-    const attScore = classDatesThisMonth.length > 0 ? Math.round(attAll.filter(a => a.status === 'present').length / classDatesThisMonth.length * 100) : 0;
+    const attAll   = dbAttendance.filter(a => a.classId === classId && a.studentId === s.id && radarAttDates.includes(a.date));
+    const attScore = radarAttDates.length > 0 ? Math.round(attAll.filter(a => a.status === 'present').length / radarAttDates.length * 100) : 0;
     return { name: s.name, color: COLORS[si % COLORS.length], axes: [
       { axis: '과제성실도', value: hwScore },
       { axis: '데일리테스트', value: dailyAvg },
@@ -2737,7 +2769,20 @@ export default function TeacherClassDetailPage() {
         <div className="space-y-4">
           {radarData.some(r => r.axes.some(a => a.value > 0)) && (
             <div className="card p-4">
-              <h3 className="font-semibold text-gray-800 mb-1">학생별 종합 역량 (방사형)</h3>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="font-semibold text-gray-800">학생별 종합 역량 (방사형)</h3>
+                <div className="flex gap-1">
+                  {([['month', `${currentMonth.slice(5)}월`], ['3m', '최근 3개월'], ['all', '전체']] as const).map(([val, label]) => (
+                    <button key={val} onClick={() => setRadarPeriod(val)}
+                      className="text-xs px-2 py-0.5 rounded-lg font-semibold transition-all"
+                      style={radarPeriod === val
+                        ? { background: '#6366F1', color: '#fff' }
+                        : { background: '#F1F5F9', color: '#64748B' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <p className="text-xs text-gray-400 mb-3">과제성실도 · 데일리테스트 · 주간시험 · 월간시험 · 출석률 (100점 환산)</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {radarData.map(student => (
