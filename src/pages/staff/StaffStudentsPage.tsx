@@ -25,6 +25,19 @@ const TYPE_COLORS: Record<string, string> = {
   daily: '#6366f1', weekly: '#0ea5e9', monthly: '#10b981',
 };
 
+// 퇴원 사유 프리셋
+const WITHDRAW_REASONS = [
+  '타 학원 이동',
+  '이사 / 전학',
+  '학업 부담 과다',
+  '개인 사정',
+  '경제적 사정',
+  '학교 시험 준비',
+  '학원 불만족',
+  '졸업 / 상급학교 진학',
+  '기타 (직접 입력)',
+] as const;
+
 // ── 유틸 함수 ──────────────────────────────────────────────────
 /** YYYY-MM → YYYY.MM */
 const fmtYM = (dateStr: string) => {
@@ -102,7 +115,7 @@ export default function StaffStudentsPage() {
 
   // 학생 편집 상태
   const [editingStudent, setEditingStudent] = useState<false | 'withdraw' | 'class'>(false);
-  const [withdrawForm, setWithdrawForm] = useState({ reason: '', date: TODAY });
+  const [withdrawForm, setWithdrawForm] = useState({ reasonPreset: '', reasonCustom: '', date: TODAY });
 
   // 납부 메시지 / 웹훅 설정
   const [editingPayment, setEditingPayment] = useState(false);
@@ -192,6 +205,32 @@ export default function StaffStudentsPage() {
   );
 
   const tuitionPeriod = selected ? calcTuitionPeriod(selected.tuitionDueDate) : null;
+
+  /** 이번 달 enrollmentMgmt 기반 학생별 납부 상태 맵 */
+  const paymentStatusMap = useMemo(() => {
+    const thisMonth = TODAY.slice(0, 7);
+    const map: Record<string, { tuitionPaid: boolean; textbookUnpaid: boolean; textbookPaid: boolean }> = {};
+    const thisRecs = enrollmentMgmt.filter(r => r.paymentMonth === thisMonth);
+
+    // 학생별로 묶기
+    const byStudent: Record<string, EnrollmentMgmt[]> = {};
+    for (const r of thisRecs) {
+      if (!byStudent[r.studentId]) byStudent[r.studentId] = [];
+      byStudent[r.studentId].push(r);
+    }
+
+    for (const [sid, recs] of Object.entries(byStudent)) {
+      const tuitionPaid   = recs.every(r => r.tuitionPaid);
+      const textbookUnpaid = recs.some(r =>
+        r.textbookPayments && Object.values(r.textbookPayments).some(p => !p.paid)
+      );
+      const textbookPaid  = recs.some(r =>
+        r.textbookPayments && Object.values(r.textbookPayments).some(p => p.paid)
+      ) && !textbookUnpaid;
+      map[sid] = { tuitionPaid, textbookUnpaid, textbookPaid };
+    }
+    return map;
+  }, [enrollmentMgmt]);
 
   // ── 납부 관련 핸들러 ────────────────────────────────────────
   const openEditPayment = () => {
@@ -311,16 +350,33 @@ export default function StaffStudentsPage() {
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs">
+                  <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs flex-shrink-0">
                     {stu.name[0]}
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-800 text-sm">{stu.name}</div>
-                    <div className="text-xs text-gray-400">{stu.grade} · {stu.school}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-800 text-sm truncate">{stu.name}</div>
+                    <div className="text-xs text-gray-400 truncate">{stu.grade} · {stu.school}</div>
                   </div>
-                  {!stu.tuitionPaid && (
-                    <span className="ml-auto text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">미납</span>
-                  )}
+                  {(() => {
+                    const st = paymentStatusMap[stu.id];
+                    const tuUnpaid = st ? !st.tuitionPaid : !stu.tuitionPaid;
+                    const tbUnpaid = st?.textbookUnpaid ?? false;
+                    if (!tuUnpaid && !tbUnpaid) return null;
+                    return (
+                      <div className="flex flex-col gap-0.5 items-end flex-shrink-0">
+                        {tuUnpaid && (
+                          <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded leading-tight whitespace-nowrap">
+                            수강료 미납
+                          </span>
+                        )}
+                        {tbUnpaid && (
+                          <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded leading-tight whitespace-nowrap">
+                            교재비 미납
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="text-xs text-gray-400">
                   출석률 {rate}% · 결석 {recs.filter(r => r.status === 'absent').length}회
@@ -359,26 +415,35 @@ export default function StaffStudentsPage() {
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
                       📅 입원 {selected.enrollDate}
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      selected.tuitionPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {selected.tuitionPaid ? '수강료 납부' : '수강료 미납'}
-                    </span>
                     {(() => {
-                      const thisMonth = TODAY.slice(0, 7);
-                      const thisMonthRecords = enrollmentMgmt.filter(r =>
-                        r.studentId === selected.id && r.paymentMonth === thisMonth
-                      );
-                      const textbookUnpaid = thisMonthRecords.some(r => {
-                        if (!r.textbookPayments) return false;
-                        return Object.values(r.textbookPayments).some(p => !p.paid);
-                      });
-                      if (!textbookUnpaid) return null;
+                      const st = paymentStatusMap[selected.id];
+                      const tuPaid = st ? st.tuitionPaid : selected.tuitionPaid;
                       return (
-                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
-                          교재비 미납
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          tuPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {tuPaid ? '수강료 납부' : '수강료 미납'}
                         </span>
                       );
+                    })()}
+                    {(() => {
+                      const st = paymentStatusMap[selected.id];
+                      if (!st) return null;
+                      if (st.textbookUnpaid) {
+                        return (
+                          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
+                            교재비 미납
+                          </span>
+                        );
+                      }
+                      if (st.textbookPaid) {
+                        return (
+                          <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">
+                            교재비 납부
+                          </span>
+                        );
+                      }
+                      return null;
                     })()}
                   </div>
                 </div>
@@ -415,39 +480,73 @@ export default function StaffStudentsPage() {
               {/* 퇴원 처리 폼 */}
               {editingStudent === 'withdraw' && (
                 <div className="mt-3 p-3 bg-red-50 rounded-xl border border-red-100 space-y-2">
-                  <div className="text-xs font-semibold text-red-700">퇴원 처리</div>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label className="text-[10px] text-gray-500">퇴원일</label>
-                      <input type="date" value={withdrawForm.date}
-                        onChange={e => setWithdrawForm(f => ({ ...f, date: e.target.value }))}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none mt-0.5" />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-[10px] text-gray-500">퇴원 사유</label>
-                      <input value={withdrawForm.reason}
-                        onChange={e => setWithdrawForm(f => ({ ...f, reason: e.target.value }))}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none mt-0.5"
-                        placeholder="타학원이동, 이사 등" />
-                    </div>
+                  <div className="text-xs font-semibold text-red-700">🚪 퇴원 처리</div>
+
+                  {/* 퇴원일 */}
+                  <div>
+                    <label className="text-[10px] text-gray-500 mb-0.5 block">퇴원일</label>
+                    <input
+                      type="date"
+                      value={withdrawForm.date}
+                      onChange={e => setWithdrawForm(f => ({ ...f, date: e.target.value }))}
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none bg-white"
+                    />
                   </div>
-                  <div className="flex gap-2">
+
+                  {/* 퇴원 사유 드롭다운 */}
+                  <div>
+                    <label className="text-[10px] text-gray-500 mb-0.5 block">퇴원 사유</label>
+                    <select
+                      value={withdrawForm.reasonPreset}
+                      onChange={e => setWithdrawForm(f => ({ ...f, reasonPreset: e.target.value, reasonCustom: '' }))}
+                      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none bg-white"
+                    >
+                      <option value="">사유를 선택하세요...</option>
+                      {WITHDRAW_REASONS.map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 기타: 직접 입력 */}
+                  {withdrawForm.reasonPreset === '기타 (직접 입력)' && (
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-0.5 block">직접 입력</label>
+                      <input
+                        value={withdrawForm.reasonCustom}
+                        onChange={e => setWithdrawForm(f => ({ ...f, reasonCustom: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none bg-white"
+                        placeholder="퇴원 사유를 직접 입력하세요"
+                        autoFocus
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
                     <button
                       onClick={() => {
+                        const finalReason =
+                          withdrawForm.reasonPreset === '기타 (직접 입력)'
+                            ? (withdrawForm.reasonCustom.trim() || '기타')
+                            : (withdrawForm.reasonPreset || '미입력');
                         setStudents(prev => prev.map(s =>
                           s.id !== selected.id ? s : {
                             ...s,
                             status: 'withdrawn',
                             withdrawDate: withdrawForm.date,
-                            withdrawReason: withdrawForm.reason || '직접입력',
+                            withdrawReason: finalReason,
                           }
                         ));
                         setEditingStudent(false);
                       }}
                       className="flex-1 text-xs py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 font-semibold"
-                    >확인</button>
-                    <button onClick={() => setEditingStudent(false)}
-                      className="flex-1 text-xs py-1.5 bg-white text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    >
+                      확인
+                    </button>
+                    <button
+                      onClick={() => setEditingStudent(false)}
+                      className="flex-1 text-xs py-1.5 bg-white text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
                       취소
                     </button>
                   </div>
