@@ -3124,16 +3124,18 @@ export default function TeacherClassDetailPage() {
                       <h3 className="font-semibold text-gray-800 mb-1">분야별 학생 점수 비교</h3>
                       <p className="text-xs text-gray-400 mb-3">{selFieldDate} 시험 기준 · 분야별 학생 점수 (100점 환산)</p>
                       <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={fieldBarData} margin={{ left: -10 }}>
+                        <LineChart data={fieldBarData} margin={{ left: -10 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                           <XAxis dataKey="field" tick={{ fontSize: 11 }} />
                           <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={v => `${v}점`} />
                           <Tooltip formatter={(v) => `${v}점`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                           <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
                           {students.map((s, i) => (
-                            <Bar key={s.id} dataKey={s.name} fill={COLORS[i % COLORS.length]} radius={[3, 3, 0, 0]} />
+                            <Line key={s.id} type="monotone" dataKey={s.name}
+                              stroke={COLORS[i % COLORS.length]} strokeWidth={2}
+                              dot={{ r: 4 }} activeDot={{ r: 6 }} />
                           ))}
-                        </BarChart>
+                        </LineChart>
                       </ResponsiveContainer>
                     </div>
                   );

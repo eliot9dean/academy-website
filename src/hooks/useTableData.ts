@@ -13,7 +13,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
-export const DB_LS_KEY      = 'ams_db_tables_v2';
+export const DB_LS_KEY      = 'ams_db_tables_v3';
 export const API_TOKEN_KEY  = 'ams_api_token';
 
 export const DB_INIT: Record<string, Row[]> = {
