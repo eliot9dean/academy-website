@@ -72,6 +72,23 @@ export async function supabaseGetCurrentUser(): Promise<User | null> {
   return profile ? profileToUser(profile) : null;
 }
 
+// ── Realtime 구독: ams_tables 변경 시 콜백 호출 ──────────────────────────────
+export function supabaseSubscribeChanges(onUpdate: (tableName: string, rows: Row[]) => void) {
+  const channel = supabase
+    .channel('ams_tables_realtime')
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'ams_tables' },
+      (payload) => {
+        const { name, data } = payload.new as { name: string; data: Row[] };
+        if (name && Array.isArray(data)) onUpdate(name, data);
+      },
+    )
+    .subscribe();
+  // 구독 해제 함수 반환
+  return () => { supabase.removeChannel(channel); };
+}
+
 // ── 전체 데이터 조회 ──────────────────────────────────────────────────────────
 export async function supabaseGetAll(): Promise<Record<string, Row[]> | null> {
   const { data, error } = await supabase

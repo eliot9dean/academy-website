@@ -7,7 +7,7 @@ import {
 } from '../data/mockData';
 import { API_URL, API_ENABLED, SUPABASE_ENABLED } from '../config/api';
 import {
-  supabaseGetAll, supabaseSaveTable, supabaseChangePassword,
+  supabaseGetAll, supabaseSaveTable, supabaseChangePassword, supabaseSubscribeChanges,
 } from '../lib/supabase';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +39,7 @@ export const DB_INIT: Record<string, Row[]> = {
 let _db: Record<string, Row[]> | null = null;
 const _listeners = new Set<() => void>();
 let _apiSynced = false;   // 이 세션에서 API 동기화가 완료됐는지 여부
+let _realtimeUnsubscribe: (() => void) | null = null; // Supabase Realtime 구독 해제 함수
 
 /** localStorage에서 DB를 읽어 캐시 초기화 (최초 1회) */
 function initDB(): Record<string, Row[]> {
@@ -141,6 +142,15 @@ export async function syncFromAPI(): Promise<void> {
         writeDB(serverLocal);
       }
       _apiSynced = true;
+
+      // Realtime 구독 시작 (중복 방지)
+      if (!_realtimeUnsubscribe) {
+        _realtimeUnsubscribe = supabaseSubscribeChanges((tableName, rows) => {
+          if (tableName === '_seed_version') return; // 버전 메타는 무시
+          const db = getDB();
+          writeDB({ ...db, [tableName]: rows });
+        });
+      }
     } catch { /* 무시 */ }
     return;
   }
