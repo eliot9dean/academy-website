@@ -206,27 +206,36 @@ export default function StaffStudentsPage() {
 
   const tuitionPeriod = selected ? calcTuitionPeriod(selected.tuitionDueDate) : null;
 
-  /** 이번 달 enrollmentMgmt 기반 학생별 납부 상태 맵 */
+  /** enrollmentMgmt 기반 학생별 납부 상태 맵 (각 학생의 가장 최근 paymentMonth 기준) */
   const paymentStatusMap = useMemo(() => {
-    const thisMonth = TODAY.slice(0, 7);
     const map: Record<string, { tuitionPaid: boolean; textbookUnpaid: boolean; textbookPaid: boolean }> = {};
-    const thisRecs = enrollmentMgmt.filter(r => r.paymentMonth === thisMonth);
 
-    // 학생별로 묶기
+    // 학생별로 그룹핑
     const byStudent: Record<string, EnrollmentMgmt[]> = {};
-    for (const r of thisRecs) {
+    for (const r of enrollmentMgmt) {
       if (!byStudent[r.studentId]) byStudent[r.studentId] = [];
       byStudent[r.studentId].push(r);
     }
 
     for (const [sid, recs] of Object.entries(byStudent)) {
-      const tuitionPaid   = recs.every(r => r.tuitionPaid);
-      const textbookUnpaid = recs.some(r =>
-        r.textbookPayments && Object.values(r.textbookPayments).some(p => !p.paid)
-      );
-      const textbookPaid  = recs.some(r =>
-        r.textbookPayments && Object.values(r.textbookPayments).some(p => p.paid)
-      ) && !textbookUnpaid;
+      // 가장 최근 paymentMonth의 records만 사용
+      const latestMonth = recs.reduce((max, r) => r.paymentMonth > max ? r.paymentMonth : max, '');
+      const latestRecs  = recs.filter(r => r.paymentMonth === latestMonth);
+
+      const tuitionPaid = latestRecs.every(r => r.tuitionPaid);
+
+      // 교재비 미납: 신형(textbookPayments) + 구형(textbookFee/textbookPaid) 모두 검사
+      const textbookUnpaid = latestRecs.some(r => {
+        if (r.textbookPayments && Object.values(r.textbookPayments).some(p => !p.paid)) return true;
+        if (r.textbookFee && !r.textbookPaid && r.textbookNotPurchased === false) return true;
+        return false;
+      });
+      const textbookPaid = latestRecs.some(r => {
+        if (r.textbookPayments && Object.values(r.textbookPayments).some(p => p.paid)) return true;
+        if (r.textbookFee && r.textbookPaid) return true;
+        return false;
+      }) && !textbookUnpaid;
+
       map[sid] = { tuitionPaid, textbookUnpaid, textbookPaid };
     }
     return map;
@@ -452,7 +461,7 @@ export default function StaffStudentsPage() {
               <div className="mt-3 flex gap-2 flex-wrap border-t border-gray-100 pt-3">
                 {selected.status === 'enrolled' ? (
                   <button
-                    onClick={() => { setWithdrawForm({ reason: '', date: TODAY }); setEditingStudent('withdraw'); }}
+                    onClick={() => { setWithdrawForm({ reasonPreset: '', reasonCustom: '', date: TODAY }); setEditingStudent('withdraw'); }}
                     className="text-xs px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
                   >
                     🚪 퇴원 처리
