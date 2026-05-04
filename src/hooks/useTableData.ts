@@ -13,10 +13,10 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
-export const DB_LS_KEY      = 'ams_db_tables_v4';
+export const DB_LS_KEY      = 'ams_db_tables_v5';
 export const API_TOKEN_KEY  = 'ams_api_token';
 // 더미 데이터가 바뀔 때마다 올려주면 Supabase 강제 재업로드됨
-const SEED_VERSION = 4;
+const SEED_VERSION = 5;
 
 export const DB_INIT: Record<string, Row[]> = {
   users:          mockUsers.map(r => ({ ...r })),
