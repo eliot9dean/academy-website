@@ -269,12 +269,15 @@ export default function StaffStudentsPage() {
       <div className="w-72 flex-shrink-0 flex flex-col gap-3">
         <div>
           <h1 className="text-lg font-bold text-gray-900 mb-3">학생 정보</h1>
-          <input
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-300"
-            placeholder="학생명, 학교, 학년 검색..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-base">🔍</span>
+            <input
+              className="w-full pl-9 pr-3 py-2 border-2 border-gray-300 rounded-lg text-sm bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              placeholder="학생명, 학교, 학년 검색..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-2">
