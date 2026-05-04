@@ -15,6 +15,8 @@ type Row = Record<string, any>;
 
 export const DB_LS_KEY      = 'ams_db_tables_v4';
 export const API_TOKEN_KEY  = 'ams_api_token';
+// 더미 데이터가 바뀔 때마다 올려주면 Supabase 강제 재업로드됨
+const SEED_VERSION = 4;
 
 export const DB_INIT: Record<string, Row[]> = {
   users:          mockUsers.map(r => ({ ...r })),
@@ -105,9 +107,11 @@ export async function syncFromAPI(): Promise<void> {
   if (SUPABASE_ENABLED) {
     try {
       const serverData = await supabaseGetAll();
-      if (!serverData || Object.keys(serverData).length === 0) {
-        // 첫 사용: 초기 데이터 업로드
-        await uploadAllToSupabase(DB_INIT);
+      const serverSeedVersion = (serverData?._seed_version?.[0] as { v?: number } | undefined)?.v;
+      if (!serverData || Object.keys(serverData).length === 0 || serverSeedVersion !== SEED_VERSION) {
+        // 첫 사용 또는 시드 버전 불일치: DB_INIT으로 Supabase 전체 재업로드
+        const initWithVersion = { ...DB_INIT, _seed_version: [{ v: SEED_VERSION }] };
+        await uploadAllToSupabase(initWithVersion);
         writeDB({ ...DB_INIT });
       } else {
         writeDB(serverData);
