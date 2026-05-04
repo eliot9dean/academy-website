@@ -5,11 +5,12 @@ import {
 import { useTableData } from '../../hooks/useTableData';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import type {
-  Student, ClassInfo, AttendanceRecord, TestScore, User, ClassHistoryRecord,
+  Student, ClassInfo, AttendanceRecord, TestScore, User, ClassHistoryRecord, EnrollmentMgmt,
 } from '../../types';
 
 // ── 상수 ────────────────────────────────────────────────────────
-const TODAY = '2026-04-23';
+const _d = new Date();
+const TODAY = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
 
 const DEFAULT_MESSAGE =
   `안녕하세요, {학생명} 학부모님.\n` +
@@ -99,6 +100,10 @@ export default function StaffStudentsPage() {
   const [testType,   setTestType]   = useState<'all' | 'daily' | 'weekly' | 'monthly'>('all');
   const [testPeriod, setTestPeriod] = useState<'all' | '1m' | '3m' | '6m'>('all');
 
+  // 학생 편집 상태
+  const [editingStudent, setEditingStudent] = useState<false | 'withdraw' | 'class'>(false);
+  const [withdrawForm, setWithdrawForm] = useState({ reason: '', date: TODAY });
+
   // 납부 메시지 / 웹훅 설정
   const [editingPayment, setEditingPayment] = useState(false);
   const [webhookUrl,      setWebhookUrl]     = useLocalStorage<string>('ams_webhook_url',      '');
@@ -108,12 +113,13 @@ export default function StaffStudentsPage() {
   const [sending,         setSending]        = useState(false);
 
   // 데이터
-  const [students]     = useTableData<Student>('students');
-  const [classes]      = useTableData<ClassInfo>('classes');
-  const [attendance]   = useTableData<AttendanceRecord>('attendance');
-  const [testScores]   = useTableData<TestScore>('testScores');
-  const [users]        = useTableData<User>('users');
-  const [classHistory] = useTableData<ClassHistoryRecord>('classHistory');
+  const [students, setStudents] = useTableData<Student>('students');
+  const [classes]               = useTableData<ClassInfo>('classes');
+  const [attendance]            = useTableData<AttendanceRecord>('attendance');
+  const [testScores]            = useTableData<TestScore>('testScores');
+  const [users]                 = useTableData<User>('users');
+  const [classHistory]          = useTableData<ClassHistoryRecord>('classHistory');
+  const [enrollmentMgmt]        = useTableData<EnrollmentMgmt>('enrollmentMgmt');
 
   // ── 파생 데이터 ─────────────────────────────────────────────
   const filtered = useMemo(() =>
@@ -296,6 +302,7 @@ export default function StaffStudentsPage() {
                   setTestType('all');
                   setTestPeriod('all');
                   setEditingPayment(false);
+                  setEditingStudent(false);
                 }}
                 className={`w-full text-left p-3 rounded-xl border transition-all ${
                   selectedId === stu.id
@@ -357,9 +364,129 @@ export default function StaffStudentsPage() {
                     }`}>
                       {selected.tuitionPaid ? '수강료 납부' : '수강료 미납'}
                     </span>
+                    {(() => {
+                      const thisMonth = TODAY.slice(0, 7);
+                      const thisMonthRecords = enrollmentMgmt.filter(r =>
+                        r.studentId === selected.id && r.paymentMonth === thisMonth
+                      );
+                      const textbookUnpaid = thisMonthRecords.some(r => {
+                        if (!r.textbookPayments) return false;
+                        return Object.values(r.textbookPayments).some(p => !p.paid);
+                      });
+                      if (!textbookUnpaid) return null;
+                      return (
+                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
+                          교재비 미납
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
+              {/* 관리 버튼들 */}
+              <div className="mt-3 flex gap-2 flex-wrap border-t border-gray-100 pt-3">
+                {selected.status === 'enrolled' ? (
+                  <button
+                    onClick={() => { setWithdrawForm({ reason: '', date: TODAY }); setEditingStudent('withdraw'); }}
+                    className="text-xs px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                  >
+                    🚪 퇴원 처리
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setStudents(prev => prev.map(s =>
+                        s.id !== selected.id ? s : { ...s, status: 'enrolled', withdrawDate: undefined, withdrawReason: undefined }
+                      ));
+                    }}
+                    className="text-xs px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                  >
+                    ✅ 재원 처리
+                  </button>
+                )}
+                <button
+                  onClick={() => setEditingStudent('class')}
+                  className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  🔄 반 변경
+                </button>
+              </div>
+
+              {/* 퇴원 처리 폼 */}
+              {editingStudent === 'withdraw' && (
+                <div className="mt-3 p-3 bg-red-50 rounded-xl border border-red-100 space-y-2">
+                  <div className="text-xs font-semibold text-red-700">퇴원 처리</div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[10px] text-gray-500">퇴원일</label>
+                      <input type="date" value={withdrawForm.date}
+                        onChange={e => setWithdrawForm(f => ({ ...f, date: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none mt-0.5" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] text-gray-500">퇴원 사유</label>
+                      <input value={withdrawForm.reason}
+                        onChange={e => setWithdrawForm(f => ({ ...f, reason: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none mt-0.5"
+                        placeholder="타학원이동, 이사 등" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setStudents(prev => prev.map(s =>
+                          s.id !== selected.id ? s : {
+                            ...s,
+                            status: 'withdrawn',
+                            withdrawDate: withdrawForm.date,
+                            withdrawReason: withdrawForm.reason || '직접입력',
+                          }
+                        ));
+                        setEditingStudent(false);
+                      }}
+                      className="flex-1 text-xs py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 font-semibold"
+                    >확인</button>
+                    <button onClick={() => setEditingStudent(false)}
+                      className="flex-1 text-xs py-1.5 bg-white text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50">
+                      취소
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 반 변경 폼 */}
+              {editingStudent === 'class' && (
+                <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-100 space-y-2">
+                  <div className="text-xs font-semibold text-blue-700">반 변경</div>
+                  <div className="text-[10px] text-gray-500">현재 수강반: {classes.filter(c => (c.studentIds as string[]).includes(selected.id)).map(c => c.name).join(', ') || '없음'}</div>
+                  <div className="space-y-1">
+                    {classes.map(c => {
+                      const enrolled = (c.studentIds as string[]).includes(selected.id);
+                      return (
+                        <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                          <input type="checkbox" checked={enrolled}
+                            onChange={e => {
+                              setStudents(prev => prev.map(s => {
+                                if (s.id !== selected.id) return s;
+                                const ids = [...(s.classIds as string[])];
+                                if (e.target.checked) { if (!ids.includes(c.id)) ids.push(c.id); }
+                                else { const i = ids.indexOf(c.id); if (i >= 0) ids.splice(i, 1); }
+                                return { ...s, classIds: ids };
+                              }));
+                            }}
+                          />
+                          <span>{c.name}</span>
+                          <span className="text-gray-400">{c.subject}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <button onClick={() => setEditingStudent(false)}
+                    className="w-full text-xs py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold">
+                    완료
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ── 출결 현황 ── */}

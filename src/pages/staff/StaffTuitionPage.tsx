@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { useTableData } from '../../hooks/useTableData';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import type { EnrollmentMgmt, Student, ClassInfo, Textbook } from '../../types';
+import type { EnrollmentMgmt, Student, ClassInfo, Textbook, FinancialRecord } from '../../types';
 
 // ── 날짜 동적 계산 ─────────────────────────────────────────────
 const _now = new Date();
@@ -91,10 +91,11 @@ function CellInput({ type = 'text', value, placeholder, alignRight, onChange, on
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────────
 export default function StaffTuitionPage() {
-  const [records, setRecords] = useTableData<EnrollmentMgmt>('enrollmentMgmt');
-  const [students]            = useTableData<Student>('students');
-  const [classes]             = useTableData<ClassInfo>('classes');
-  const [textbooks]           = useTableData<Textbook>('textbooks');
+  const [records, setRecords]   = useTableData<EnrollmentMgmt>('enrollmentMgmt');
+  const [students, setStudents] = useTableData<Student>('students');
+  const [classes]               = useTableData<ClassInfo>('classes');
+  const [textbooks]             = useTableData<Textbook>('textbooks');
+  const [, setFinancials] = useTableData<FinancialRecord>('financials');
 
   // ── 필터 상태 ───────────────────────────────────────────────
   const [selMonth,     setSelMonth]     = useState(THIS_MONTH);
@@ -190,12 +191,40 @@ export default function StaffTuitionPage() {
 
   // ── 수강료 납부 토글 ─────────────────────────────────────────
   const toggleTuition = useCallback((id: string) => {
-    setRecords(prev => prev.map(r => {
-      if (r.id !== id) return r;
-      const next = !r.tuitionPaid;
-      return { ...r, tuitionPaid: next, tuitionPaidDate: next ? TODAY : undefined };
-    }));
-  }, [setRecords]);
+    const record = records.find(r => r.id === id);
+    if (!record) return;
+    const next = !record.tuitionPaid;
+
+    // 1. enrollmentMgmt 업데이트
+    setRecords(prev => prev.map(r =>
+      r.id !== id ? r : { ...r, tuitionPaid: next, tuitionPaidDate: next ? TODAY : undefined }
+    ));
+
+    // 2. students.tuitionPaid 동기화 (가장 최신 달 납부 여부 반영)
+    setStudents(prev => prev.map(s =>
+      s.id !== record.studentId ? s : { ...s, tuitionPaid: next, tuitionDueDate: record.tuitionDueDate }
+    ));
+
+    // 3. 재무관리 연동: 납부 시 수입 추가, 미납 시 제거
+    const finId = `auto_tu_${record.studentId}_${record.classId}_${record.paymentMonth}`;
+    const stu = students.find(s => s.id === record.studentId);
+    setFinancials(prev => {
+      if (next) {
+        if (prev.some(f => f.id === finId)) return prev;
+        return [...prev, {
+          id: finId,
+          type: 'income' as const,
+          category: '수강료',
+          amount: record.tuitionFee,
+          date: TODAY,
+          description: `${stu?.name ?? record.studentId} ${record.paymentMonth} 수강료`,
+          studentId: record.studentId,
+        }];
+      } else {
+        return prev.filter(f => f.id !== finId);
+      }
+    });
+  }, [records, students, setRecords, setStudents, setFinancials]);
 
   // ── 교재 납부 상태 변경 (현재 행 자체 필드만 업데이트 → 타 행 영향 없음) ──
   const setTBStatus = useCallback((rowId: string, next: TBStatus) => {
@@ -262,13 +291,37 @@ export default function StaffTuitionPage() {
 
   // ── 교재 납부 토글 ────────────────────────────────────────────
   const toggleTextbook = useCallback((rowId: string, textbookId: string, paid: boolean) => {
+    const record = records.find(r => r.id === rowId);
+    if (!record) return;
+
     setRecords(prev => prev.map(r => {
       if (r.id !== rowId) return r;
       const payments = { ...(r.textbookPayments ?? {}) };
       payments[textbookId] = { paid, paidDate: paid ? TODAY : undefined };
       return { ...r, textbookPayments: payments };
     }));
-  }, [setRecords]);
+
+    // 재무관리 연동
+    const finId = `auto_tb_${rowId}_${textbookId}`;
+    const stu = students.find(s => s.id === record.studentId);
+    const tb = textbooks.find(t => t.id === textbookId);
+    setFinancials(prev => {
+      if (paid) {
+        if (prev.some(f => f.id === finId)) return prev;
+        return [...prev, {
+          id: finId,
+          type: 'income' as const,
+          category: '교재비',
+          amount: tb?.price ?? 0,
+          date: TODAY,
+          description: `${stu?.name ?? record.studentId} 교재비 (${tb?.name ?? textbookId})`,
+          studentId: record.studentId,
+        }];
+      } else {
+        return prev.filter(f => f.id !== finId);
+      }
+    });
+  }, [records, students, textbooks, setRecords, setFinancials]);
 
   // ── 렌더링 ──────────────────────────────────────────────────
   return (
