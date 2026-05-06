@@ -692,7 +692,8 @@ export default function TeacherClassDetailPage() {
   })();
 
   const hwLineData = (() => {
-    const dates = [...new Set(dbHomework.filter(r => r.classId === classId).map(r => r.date))].sort();
+    const dates = [...new Set(dbHomework.filter(r => r.classId === classId).map(r => r.date))].sort()
+      .filter(d => (!hwEffStart || d >= hwEffStart) && (!hwEffEnd || d <= hwEffEnd));
     return dates.map(date => {
       const row: Record<string, string | number> = { date: date.slice(5) };
       students.forEach(s => {
@@ -1359,13 +1360,12 @@ export default function TeacherClassDetailPage() {
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {([
-                    { id:'all', label:'전체' },
                     { id:'1w',  label:'1주일' },
                     { id:'1m',  label:'1개월' },
                     { id:'3m',  label:'3개월' },
                   ] as const).map(opt => (
                     <button key={opt.id}
-                      onClick={() => { setHwHistPreset(opt.id); if (opt.id !== 'all') { setHwHistStart(''); setHwHistEnd(''); } }}
+                      onClick={() => { setHwHistPreset(opt.id); setHwHistStart(''); setHwHistEnd(''); }}
                       className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
                       style={hwHistPreset === opt.id
                         ? { background:'#3B82F6', color:'#fff' }
@@ -1425,7 +1425,7 @@ export default function TeacherClassDetailPage() {
           {/* 과제 수행도 추이 */}
           {(hwLineData.length > 0 || hwDates.length > 0) && (
             <div className="card p-4">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <div>
                   <h3 className="font-semibold text-gray-800">과제 수행도 추이</h3>
                   {/* 그래프 보기일 때만 범례 표시 */}
@@ -1433,13 +1433,44 @@ export default function TeacherClassDetailPage() {
                     <p className="text-xs text-gray-400">우수=100 · 보통=70 · 미흡=35 · 미제출=0</p>
                   )}
                 </div>
-                <div className="flex gap-0.5 bg-gray-100 p-0.5 rounded-lg">
-                  {(['calendar', 'chart'] as HwSubTab[]).map(t => (
-                    <button key={t} onClick={() => setHwSubTab(t)}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium ${hwSubTab === t ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}>
-                      {t === 'calendar' ? '캘린더' : '그래프'}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* 기간 프리셋 */}
+                  {([
+                    { id:'1w', label:'1주일' },
+                    { id:'1m', label:'1개월' },
+                    { id:'3m', label:'3개월' },
+                  ] as const).map(opt => (
+                    <button key={opt.id}
+                      onClick={() => { setHwHistPreset(opt.id); setHwHistStart(''); setHwHistEnd(''); }}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                      style={hwHistPreset === opt.id
+                        ? { background:'#3B82F6', color:'#fff' }
+                        : { background:'#EFF6FF', color:'#1D4ED8' }}>
+                      {opt.label}
                     </button>
                   ))}
+                  <span className="text-gray-300">|</span>
+                  <input type="date" className="px-2 py-1 border border-gray-200 rounded-lg text-xs"
+                    value={hwHistStart}
+                    onChange={e => { setHwHistStart(e.target.value); setHwHistPreset('all'); }} />
+                  <span className="text-xs text-gray-400">~</span>
+                  <input type="date" className="px-2 py-1 border border-gray-200 rounded-lg text-xs"
+                    value={hwHistEnd}
+                    onChange={e => { setHwHistEnd(e.target.value); setHwHistPreset('all'); }} />
+                  {(hwHistStart || hwHistEnd) && (
+                    <button onClick={() => { setHwHistStart(''); setHwHistEnd(''); setHwHistPreset('1w'); }}
+                      className="px-2 py-1 rounded-lg bg-gray-100 text-gray-500 text-xs">초기화</button>
+                  )}
+                  <span className="text-gray-300">|</span>
+                  {/* 캘린더/그래프 탭 */}
+                  <div className="flex gap-0.5 bg-gray-100 p-0.5 rounded-lg">
+                    {(['calendar', 'chart'] as HwSubTab[]).map(t => (
+                      <button key={t} onClick={() => setHwSubTab(t)}
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium ${hwSubTab === t ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}>
+                        {t === 'calendar' ? '캘린더' : '그래프'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
