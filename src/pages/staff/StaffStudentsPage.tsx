@@ -126,7 +126,7 @@ export default function StaffStudentsPage() {
   const [attendance]            = useTableData<AttendanceRecord>('attendance');
   const [testScores]            = useTableData<TestScore>('testScores');
   const [users]                 = useTableData<User>('users');
-  const [classHistory]          = useTableData<ClassHistoryRecord>('classHistory');
+  const [classHistory, setClassHistory] = useTableData<ClassHistoryRecord>('classHistory');
   const [enrollmentMgmt]        = useTableData<EnrollmentMgmt>('enrollmentMgmt');
   const [classConfigsDB]        = useTableData<ClassConfig>('classConfigs');
   const [textbooksDB]           = useTableData<{ id: string; name: string; price: number }>('textbooks');
@@ -590,11 +590,12 @@ export default function StaffStudentsPage() {
                         <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-blue-100 rounded px-1 py-0.5">
                           <input type="checkbox" checked={enrolled}
                             onChange={e => {
+                              const isAdding = e.target.checked;
                               // student.classIds 업데이트
                               setStudents(prev => prev.map(s => {
                                 if (s.id !== selected.id) return s;
                                 const ids = [...(s.classIds as string[])];
-                                if (e.target.checked) { if (!ids.includes(c.id)) ids.push(c.id); }
+                                if (isAdding) { if (!ids.includes(c.id)) ids.push(c.id); }
                                 else { const i = ids.indexOf(c.id); if (i >= 0) ids.splice(i, 1); }
                                 return { ...s, classIds: ids };
                               }));
@@ -602,10 +603,33 @@ export default function StaffStudentsPage() {
                               setClasses(prev => prev.map(cls => {
                                 if (cls.id !== c.id) return cls;
                                 const ids = [...(cls.studentIds as string[])];
-                                if (e.target.checked) { if (!ids.includes(selected.id)) ids.push(selected.id); }
+                                if (isAdding) { if (!ids.includes(selected.id)) ids.push(selected.id); }
                                 else { const i = ids.indexOf(selected.id); if (i >= 0) ids.splice(i, 1); }
                                 return { ...cls, studentIds: ids };
                               }));
+                              // classHistory 업데이트
+                              setClassHistory(prev => {
+                                if (isAdding) {
+                                  // 새 반 추가: 신규 이력 레코드 생성
+                                  const newRec: ClassHistoryRecord = {
+                                    id: `ch_${Date.now()}`,
+                                    studentId: selected.id,
+                                    classId: c.id,
+                                    className: c.name,
+                                    startDate: TODAY,
+                                    endDate: null,
+                                  };
+                                  return [...prev, newRec];
+                                } else {
+                                  // 반 제거: 해당 학생+반의 진행 중 이력에 종료일 설정
+                                  return prev.map(h => {
+                                    if (h.studentId === selected.id && h.classId === c.id && h.endDate === null) {
+                                      return { ...h, endDate: TODAY };
+                                    }
+                                    return h;
+                                  });
+                                }
+                              });
                             }}
                           />
                           <span className="font-medium">{c.name}</span>

@@ -330,6 +330,23 @@ function CellValue({ value, col, tableData }: { value: unknown; col: ColDef; tab
     );
   }
 
+  // multiselect (요일 등) — 배열 또는 콤마 문자열 모두 처리
+  if (col.type === 'multiselect') {
+    const arr: string[] = Array.isArray(value)
+      ? (value as string[])
+      : typeof value === 'string' && value
+        ? value.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : [];
+    if (!arr.length) return <span style={{ color: '#CBD5E1' }}>—</span>;
+    return (
+      <div className="flex flex-wrap gap-1">
+        {arr.map((v, i) => (
+          <span key={i} className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#F1F5F9', color: '#475569' }}>{v}</span>
+        ))}
+      </div>
+    );
+  }
+
   if (col.type === 'number') {
     return <span style={{ color: '#1E293B', fontVariantNumeric: 'tabular-nums' }}>{Number(value).toLocaleString('ko-KR')}</span>;
   }
@@ -407,7 +424,11 @@ function EditCell({ value, col, onChange, tableData }: {
 
   // 다중 선택 (요일 등 predefined 옵션 배열)
   if (col.type === 'multiselect' && col.options) {
-    const current = Array.isArray(value) ? (value as string[]) : [];
+    const current: string[] = Array.isArray(value)
+      ? (value as string[])
+      : typeof value === 'string' && value
+        ? value.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : [];
     return (
       <div className="flex flex-wrap gap-1">
         {col.options.map(opt => {
