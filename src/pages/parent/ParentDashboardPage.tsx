@@ -156,7 +156,7 @@ export default function ParentDashboardPage() {
   const hwNotSubmitted = overviewHW.filter(h => h.result === 'not_submitted').length;
   const hwRate         = overviewHW.length > 0 ? Math.round(hwSubmitted / overviewHW.length * 100) : 0;
 
-  // 성적 추이 (전체 기간 주간/월간)
+  // 성적 추이 (전체 기간 주간/월간 통합) — 전체현황 탭 성적 추이 카드용
   const overviewTrendData = useMemo(() =>
     allTestScores
       .filter(t => t.type === 'weekly' || t.type === 'monthly')
@@ -173,13 +173,48 @@ export default function ParentDashboardPage() {
     [allTestScores, testScores],
   );
 
-  // 최근 수업 내용 — 반별 그룹 (3열 배치용)
+  // 주간 시험 성적 추이 — 성적현황 탭 좌측 카드용
+  const weeklyTrendData = useMemo(() =>
+    allTestScores
+      .filter(t => t.type === 'weekly')
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(t => ({
+        date: t.date.slice(5),
+        점수: t.score,
+        반평균: Math.round(
+          testScores.filter(s => s.classId === t.classId && s.date === t.date && s.type === t.type)
+            .reduce((sum, s) => sum + s.score, 0) /
+          Math.max(1, testScores.filter(s => s.classId === t.classId && s.date === t.date && s.type === t.type).length)
+        ),
+      })),
+    [allTestScores, testScores],
+  );
+
+  // 월간 시험 성적 추이 — 성적현황 탭 우측 카드용
+  const monthlyTrendData = useMemo(() =>
+    allTestScores
+      .filter(t => t.type === 'monthly')
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(t => ({
+        date: t.date.slice(5),
+        점수: t.score,
+        반평균: Math.round(
+          testScores.filter(s => s.classId === t.classId && s.date === t.date && s.type === t.type)
+            .reduce((sum, s) => sum + s.score, 0) /
+          Math.max(1, testScores.filter(s => s.classId === t.classId && s.date === t.date && s.type === t.type).length)
+        ),
+      })),
+    [allTestScores, testScores],
+  );
+
+  // 최근 수업 내용 — 반별 그룹 (3열 배치용) — 오늘 이전 날짜만 표시
+  const TODAY_DATE = new Date().toISOString().slice(0, 10);
   const progressByClass = useMemo(() =>
     studentClasses.map(cls => ({
       cls,
       teacher: users.find(u => u.id === cls.teacherId),
       items: dailyProgress
-        .filter(p => p.classId === cls.id)
+        .filter(p => p.classId === cls.id && p.date <= TODAY_DATE)
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 4),
     })),
@@ -568,24 +603,46 @@ export default function ParentDashboardPage() {
             )}
           </div>
 
-          {/* 주간/월간 성적 추이 */}
-          <div className="card p-4">
-            <h3 className="font-semibold text-gray-800 mb-3">주간/월간 시험 성적 추이</h3>
-            {overviewTrendData.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center py-8">시험 데이터가 없습니다</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={overviewTrendData} margin={{ left: -10, top: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                  <YAxis domain={[40, 100]} tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="점수" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 5 }} name={`${student.name} 점수`} />
-                  <Line type="monotone" dataKey="반평균" stroke="#9ca3af" strokeWidth={1.5} strokeDasharray="5 5" dot={false} name="반 평균" />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
+          {/* 주간 / 월간 성적 추이 — 좌우 배치 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* 주간 시험 성적 추이 */}
+            <div className="card p-4">
+              <h3 className="font-semibold text-gray-800 mb-3">📊 주간 시험 성적 추이</h3>
+              {weeklyTrendData.length === 0 ? (
+                <p className="text-gray-400 text-sm text-center py-8">주간 시험 데이터가 없습니다</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={weeklyTrendData} margin={{ left: -10, top: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                    <YAxis domain={[40, 100]} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="점수" stroke="#6366F1" strokeWidth={2.5} dot={{ r: 5 }} name={`${student.name} 점수`} />
+                    <Line type="monotone" dataKey="반평균" stroke="#9ca3af" strokeWidth={1.5} strokeDasharray="5 5" dot={false} name="반 평균" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+            {/* 월간 시험 성적 추이 */}
+            <div className="card p-4">
+              <h3 className="font-semibold text-gray-800 mb-3">🏆 월간 시험 성적 추이</h3>
+              {monthlyTrendData.length === 0 ? (
+                <p className="text-gray-400 text-sm text-center py-8">월간 시험 데이터가 없습니다</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={monthlyTrendData} margin={{ left: -10, top: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                    <YAxis domain={[40, 100]} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="점수" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 5 }} name={`${student.name} 점수`} />
+                    <Line type="monotone" dataKey="반평균" stroke="#9ca3af" strokeWidth={1.5} strokeDasharray="5 5" dot={false} name="반 평균" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
 
           {/* 시험 점수 내역 — 좌우 배치 */}
