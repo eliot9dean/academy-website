@@ -77,7 +77,8 @@
       "Bash(gh run *)",
       "Bash(node -e \"const today = new Date\\(\\); console.log\\('TODAY:', today.toISOString\\(\\).slice\\(0,10\\)\\); console.log\\('THIS_MONTH:', today.toISOString\\(\\).slice\\(0,7\\)\\);\")",
       "Bash(xargs -I {} basename {})",
-      "Bash(grep \"\\\\.tsx$\")"
+      "Bash(grep \"\\\\.tsx$\")",
+      "Bash(git rm *)"
     ]
   }
 }

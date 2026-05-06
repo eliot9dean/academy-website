@@ -3,7 +3,6 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { useTableData } from '../../hooks/useTableData';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
 import type {
   Student, ClassInfo, AttendanceRecord, TestScore, User, ClassHistoryRecord, EnrollmentMgmt, ClassConfig,
 } from '../../types';
@@ -12,11 +11,6 @@ import type {
 const _d = new Date();
 const TODAY = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
 
-const DEFAULT_MESSAGE =
-  `안녕하세요, {학생명} 학부모님.\n` +
-  `이번 달({미납기간}) 수강료가 아직 납부되지 않았습니다.\n` +
-  `납부 기한은 {납부기한}까지이오니, 빠른 시일 내에 납부 부탁드립니다.\n` +
-  `감사합니다. - 학원 드림`;
 
 const TYPE_LABELS: Record<string, string> = {
   all: '전체', daily: '단어테스트', weekly: '주간테스트', monthly: '월간평가',
@@ -110,24 +104,25 @@ export default function StaffStudentsPage() {
   const [search, setSearch]               = useState('');
 
   // 테스트 결과 필터
-  const [testType,   setTestType]   = useState<'all' | 'daily' | 'weekly' | 'monthly'>('all');
-  const [testPeriod, setTestPeriod] = useState<'all' | '1m' | '3m' | '6m'>('all');
+  const [testType,    setTestType]    = useState<'all' | 'daily' | 'weekly' | 'monthly'>('all');
+  const [testPeriod,  setTestPeriod]  = useState<'all' | '1m' | '3m' | '6m'>('all');
+  const [testClassId, setTestClassId] = useState('all');  // 반 필터
+  const [testMonth,   setTestMonth]   = useState('');     // YYYY-MM 월 필터 (빈 문자 = 미사용)
+
+  // 출결 현황 기간 필터
+  const [attPeriod, setAttPeriod] = useState<'month' | '3m' | 'custom'>('month');
+  const [attMonth,  setAttMonth]  = useState(TODAY.slice(0, 7)); // YYYY-MM
+  const [attCStart, setAttCStart] = useState('');
+  const [attCEnd,   setAttCEnd]   = useState('');
 
   // 학생 편집 상태
   const [editingStudent, setEditingStudent] = useState<false | 'withdraw' | 'class'>(false);
   const [withdrawForm, setWithdrawForm] = useState({ reasonPreset: '', reasonCustom: '', date: TODAY });
 
-  // 납부 메시지 / 웹훅 설정
-  const [editingPayment, setEditingPayment] = useState(false);
-  const [webhookUrl,      setWebhookUrl]     = useLocalStorage<string>('ams_webhook_url',      '');
-  const [paymentMessage,  setPaymentMessage] = useLocalStorage<string>('ams_payment_message',  DEFAULT_MESSAGE);
-  const [tempWebhook,     setTempWebhook]    = useState('');
-  const [tempMsg,         setTempMsg]        = useState('');
-  const [sending,         setSending]        = useState(false);
 
   // 데이터
   const [students, setStudents] = useTableData<Student>('students');
-  const [classes]               = useTableData<ClassInfo>('classes');
+  const [classes,  setClasses]  = useTableData<ClassInfo>('classes');
   const [attendance]            = useTableData<AttendanceRecord>('attendance');
   const [testScores]            = useTableData<TestScore>('testScores');
   const [users]                 = useTableData<User>('users');
@@ -153,10 +148,26 @@ export default function StaffStudentsPage() {
     [selectedId, students],
   );
 
-  /** 출결 요약 (출석률 = 출석+지각+조퇴 / 총일수) */
+  /** 출결 요약 — 선택 기간 기준 */
   const attSummary = useMemo(() => {
     if (!selected) return null;
-    const recs    = attendance.filter(a => a.studentId === selected.id);
+    let start = '', end = TODAY;
+    if (attPeriod === 'month') {
+      start = `${attMonth}-01`;
+      const [y, m] = attMonth.split('-').map(Number);
+      const monthEnd = `${attMonth}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+      end = monthEnd < TODAY ? monthEnd : TODAY;
+    } else if (attPeriod === '3m') {
+      const d = new Date(TODAY); d.setMonth(d.getMonth() - 3);
+      start = d.toISOString().slice(0, 10);
+    } else {
+      start = attCStart; end = attCEnd || TODAY;
+    }
+    const recs    = attendance.filter(a =>
+      a.studentId === selected.id &&
+      (!start || a.date >= start) &&
+      a.date <= end
+    );
     const present = recs.filter(r => r.status === 'present').length;
     const absent  = recs.filter(r => r.status === 'absent').length;
     const late    = recs.filter(r => r.status === 'late').length;
@@ -164,7 +175,7 @@ export default function StaffStudentsPage() {
     const total   = recs.length;
     const rate    = total > 0 ? Math.round((present + late + early) / total * 100) : 0;
     return { present, absent, late, early, total, rate };
-  }, [selected, attendance]);
+  }, [selected, attendance, attPeriod, attMonth, attCStart, attCEnd]);
 
   /** 반 이력 트랙 */
   const historyTracks = useMemo(() => {
@@ -184,16 +195,25 @@ export default function StaffStudentsPage() {
       }]));
   }, [selected, classHistory, classes]);
 
-  /** 필터된 테스트 점수 (내림차순) */
+  /** 필터된 테스트 점수 (내림차순) — 반·월·기간 복합 필터 */
   const filteredScores = useMemo(() => {
     if (!selected) return [];
-    const start = getPresetStart(testPeriod);
+    // 월 필터 우선, 없으면 기간 프리셋
+    const dateStart = testMonth ? `${testMonth}-01` : getPresetStart(testPeriod);
+    const dateEnd   = testMonth
+      ? (() => {
+          const [y, m] = testMonth.split('-').map(Number);
+          return `${testMonth}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+        })()
+      : '';
     return testScores
       .filter(t => t.studentId === selected.id)
-      .filter(t => testType === 'all' || t.type === testType)
-      .filter(t => !start || t.date >= start)
+      .filter(t => testType    === 'all' || t.type    === testType)
+      .filter(t => testClassId === 'all' || t.classId === testClassId)
+      .filter(t => !dateStart || t.date >= dateStart)
+      .filter(t => !dateEnd   || t.date <= dateEnd)
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [selected, testScores, testType, testPeriod]);
+  }, [selected, testScores, testType, testPeriod, testClassId, testMonth]);
 
   /** 차트용 데이터 (오름차순) */
   const chartData = useMemo(() =>
@@ -205,8 +225,6 @@ export default function StaffStudentsPage() {
     })),
     [filteredScores],
   );
-
-  const tuitionPeriod = selected ? calcTuitionPeriod(selected.tuitionDueDate) : null;
 
   /** enrollmentMgmt 기반 학생별 납부 상태 맵 */
   const paymentStatusMap = useMemo(() => {
@@ -292,79 +310,6 @@ export default function StaffStudentsPage() {
     return map;
   }, [enrollmentMgmt, classConfigsDB, textbooksDB]);
 
-  // ── 납부 관련 핸들러 ────────────────────────────────────────
-  const openEditPayment = () => {
-    setTempWebhook(webhookUrl);
-    setTempMsg(paymentMessage);
-    setEditingPayment(true);
-  };
-  const savePayment = () => {
-    setWebhookUrl(tempWebhook);
-    setPaymentMessage(tempMsg);
-    setEditingPayment(false);
-  };
-
-  const sendWebhook = async () => {
-    if (!selected) return;
-
-    // ① 편집 패널이 열려있으면 먼저 저장 (state 동기화 문제 우회)
-    if (editingPayment) {
-      setWebhookUrl(tempWebhook);
-      setPaymentMessage(tempMsg);
-      setEditingPayment(false);
-    }
-
-    // ② 가장 최신값을 우선순위로 확인
-    //    편집 패널 tempWebhook > React state webhookUrl > localStorage 직접 읽기
-    let effectiveUrl =
-      editingPayment && tempWebhook.trim()
-        ? tempWebhook.trim()
-        : webhookUrl.trim();
-
-    if (!effectiveUrl) {
-      // localStorage를 직접 확인 (state 갱신 지연 대비)
-      try {
-        const raw = window.localStorage.getItem('ams_webhook_url');
-        if (raw) effectiveUrl = (JSON.parse(raw) as string).trim();
-      } catch { /* ignore */ }
-    }
-
-    if (!effectiveUrl) {
-      openEditPayment();
-      return;
-    }
-
-    const effectiveMsg = editingPayment ? tempMsg : paymentMessage;
-    const period = calcTuitionPeriod(selected.tuitionDueDate);
-    const unpaidPeriod = `${period.start} ~ ${period.end}`;
-    const filledMsg = effectiveMsg
-      .replace(/{학생명}/g,  selected.name)
-      .replace(/{미납기간}/g, unpaidPeriod)
-      .replace(/{납부기한}/g, selected.tuitionDueDate);
-
-    const payload = {
-      studentName:  selected.name,
-      unpaidPeriod,
-      dueDate:      selected.tuitionDueDate,
-      message:      filledMsg,
-      parentName:   selected.parentName,
-      parentPhone:  selected.parentPhone,
-    };
-
-    setSending(true);
-    try {
-      await fetch(effectiveUrl, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      });
-      alert(`📤 납부 요청 문자 발송 완료!\n학부모: ${selected.parentName} (${selected.parentPhone})`);
-    } catch {
-      alert('❌ 발송 중 오류가 발생했습니다.\n웹훅 주소를 확인해주세요.');
-    } finally {
-      setSending(false);
-    }
-  };
 
   // ── 렌더링 ──────────────────────────────────────────────────
   return (
@@ -398,9 +343,10 @@ export default function StaffStudentsPage() {
                 key={stu.id}
                 onClick={() => {
                   setSelectedId(stu.id);
-                  setTestType('all');
-                  setTestPeriod('all');
-                  setEditingPayment(false);
+                  setTestType('all'); setTestPeriod('all');
+                  setTestClassId('all'); setTestMonth('');
+                  setAttPeriod('month'); setAttMonth(TODAY.slice(0, 7));
+                  setAttCStart(''); setAttCEnd('');
                   setEditingStudent(false);
                 }}
                 className={`w-full text-left p-3 rounded-xl border transition-all ${
@@ -630,15 +576,21 @@ export default function StaffStudentsPage() {
               {/* 반 변경 폼 */}
               {editingStudent === 'class' && (
                 <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-100 space-y-2">
-                  <div className="text-xs font-semibold text-blue-700">반 변경</div>
-                  <div className="text-[10px] text-gray-500">현재 수강반: {classes.filter(c => (c.studentIds as string[]).includes(selected.id)).map(c => c.name).join(', ') || '없음'}</div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold text-blue-700">반 변경</div>
+                    <button onClick={() => setEditingStudent(false)}
+                      className="text-xs text-gray-400 hover:text-gray-600 px-2 py-0.5 rounded hover:bg-blue-100">✕ 취소</button>
+                  </div>
+                  <div className="text-[10px] text-gray-500">현재 수강반: {classes.filter(c => (selected.classIds as string[]).includes(c.id)).map(c => c.name).join(', ') || '없음'}</div>
                   <div className="space-y-1">
                     {classes.map(c => {
-                      const enrolled = (c.studentIds as string[]).includes(selected.id);
+                      // classIds 기준으로 checked 판단 (onChange와 일관성 유지)
+                      const enrolled = (selected.classIds as string[]).includes(c.id);
                       return (
-                        <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                        <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-blue-100 rounded px-1 py-0.5">
                           <input type="checkbox" checked={enrolled}
                             onChange={e => {
+                              // student.classIds 업데이트
                               setStudents(prev => prev.map(s => {
                                 if (s.id !== selected.id) return s;
                                 const ids = [...(s.classIds as string[])];
@@ -646,18 +598,32 @@ export default function StaffStudentsPage() {
                                 else { const i = ids.indexOf(c.id); if (i >= 0) ids.splice(i, 1); }
                                 return { ...s, classIds: ids };
                               }));
+                              // class.studentIds도 동기 업데이트
+                              setClasses(prev => prev.map(cls => {
+                                if (cls.id !== c.id) return cls;
+                                const ids = [...(cls.studentIds as string[])];
+                                if (e.target.checked) { if (!ids.includes(selected.id)) ids.push(selected.id); }
+                                else { const i = ids.indexOf(selected.id); if (i >= 0) ids.splice(i, 1); }
+                                return { ...cls, studentIds: ids };
+                              }));
                             }}
                           />
-                          <span>{c.name}</span>
+                          <span className="font-medium">{c.name}</span>
                           <span className="text-gray-400">{c.subject}</span>
                         </label>
                       );
                     })}
                   </div>
-                  <button onClick={() => setEditingStudent(false)}
-                    className="w-full text-xs py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold">
-                    완료
-                  </button>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => setEditingStudent(false)}
+                      className="flex-1 text-xs py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold">
+                      완료
+                    </button>
+                    <button onClick={() => setEditingStudent(false)}
+                      className="flex-1 text-xs py-1.5 bg-white text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50">
+                      취소
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -665,7 +631,42 @@ export default function StaffStudentsPage() {
             {/* ── 출결 현황 ── */}
             {attSummary && (
               <div className="card p-4">
-                <h3 className="font-semibold text-gray-800 mb-3">출결 현황</h3>
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                  <h3 className="font-semibold text-gray-800">출결 현황</h3>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* 월 선택 */}
+                    <input type="month"
+                      className={`px-2 py-0.5 border rounded text-xs focus:outline-none ${
+                        attPeriod === 'month' ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-500'
+                      }`}
+                      value={attMonth}
+                      onChange={e => { setAttMonth(e.target.value); setAttPeriod('month'); }}
+                    />
+                    {/* 최근 3개월 */}
+                    <button onClick={() => setAttPeriod('3m')}
+                      className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
+                        attPeriod === '3m' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}>
+                      최근3개월
+                    </button>
+                    {/* 기간 선택 */}
+                    <button onClick={() => setAttPeriod('custom')}
+                      className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
+                        attPeriod === 'custom' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}>
+                      기간선택
+                    </button>
+                    {attPeriod === 'custom' && (
+                      <>
+                        <input type="date" className="px-2 py-0.5 border border-gray-200 rounded text-xs focus:outline-none"
+                          value={attCStart} onChange={e => setAttCStart(e.target.value)} />
+                        <span className="text-xs text-gray-400">~</span>
+                        <input type="date" className="px-2 py-0.5 border border-gray-200 rounded text-xs focus:outline-none"
+                          value={attCEnd} onChange={e => setAttCEnd(e.target.value)} />
+                      </>
+                    )}
+                  </div>
+                </div>
                 <div className="grid grid-cols-4 gap-3 mb-3">
                   {[
                     { label: '출석', value: attSummary.present, color: 'text-green-600',  bg: 'bg-green-50'  },
@@ -743,40 +744,65 @@ export default function StaffStudentsPage() {
 
             {/* ── 최근 테스트 결과 ── */}
             <div className="card p-4">
-              {/* 헤더: 제목 + 종류 필터 + 기간 필터 */}
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
+              {/* 헤더 행 1: 제목 + 기간 필터(월·기간) */}
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                 <h3 className="font-semibold text-gray-800 flex-shrink-0">최근 테스트 결과</h3>
-
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* 월 선택 (전체 대신) */}
+                  <input type="month"
+                    className={`px-2 py-0.5 border rounded text-xs focus:outline-none ${
+                      testMonth ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-500'
+                    }`}
+                    value={testMonth}
+                    onChange={e => { setTestMonth(e.target.value); setTestPeriod('all'); }}
+                  />
+                  {/* 기간 버튼 (1m / 3m / 6m) */}
+                  {(['1m', '3m', '6m'] as const).map(p => (
+                    <button key={p}
+                      onClick={() => { setTestPeriod(p); setTestMonth(''); }}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                        !testMonth && testPeriod === p
+                          ? 'bg-slate-600 text-white border-slate-600'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-slate-400'
+                      }`}>
+                      {p === '1m' ? '1개월' : p === '3m' ? '3개월' : '6개월'}
+                    </button>
+                  ))}
+                  {(testMonth || testPeriod !== 'all') && (
+                    <button onClick={() => { setTestMonth(''); setTestPeriod('all'); }}
+                      className="text-xs px-2 py-0.5 rounded border border-gray-200 text-gray-400 hover:bg-gray-50">✕</button>
+                  )}
+                </div>
+              </div>
+              {/* 헤더 행 2: 반 선택 + 테스트 종류 */}
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                {/* 반 선택 버튼 */}
+                <div className="flex gap-1 flex-wrap">
+                  <button onClick={() => setTestClassId('all')}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                      testClassId === 'all'
+                        ? 'bg-gray-700 text-white border-gray-700'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+                    }`}>전체반</button>
+                  {classes.filter(c => (selected.classIds as string[]).includes(c.id)).map(c => (
+                    <button key={c.id} onClick={() => setTestClassId(c.id)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                        testClassId === c.id
+                          ? 'bg-indigo-500 text-white border-indigo-500'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'
+                      }`}>{c.name}</button>
+                  ))}
+                </div>
                 {/* 테스트 종류 버튼 */}
-                <div className="flex gap-1">
+                <div className="ml-auto flex gap-1">
                   {(['all', 'daily', 'weekly', 'monthly'] as const).map(t => (
-                    <button
-                      key={t}
-                      onClick={() => setTestType(t)}
+                    <button key={t} onClick={() => setTestType(t)}
                       className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
                         testType === t
                           ? 'bg-indigo-500 text-white border-indigo-500'
                           : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'
-                      }`}
-                    >
+                      }`}>
                       {TYPE_LABELS[t]}
-                    </button>
-                  ))}
-                </div>
-
-                {/* 기간 필터 */}
-                <div className="ml-auto flex gap-1">
-                  {(['all', '1m', '3m', '6m'] as const).map(p => (
-                    <button
-                      key={p}
-                      onClick={() => setTestPeriod(p)}
-                      className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                        testPeriod === p
-                          ? 'bg-slate-600 text-white border-slate-600'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-slate-400'
-                      }`}
-                    >
-                      {p === 'all' ? '전체' : p === '1m' ? '1개월' : p === '3m' ? '3개월' : '6개월'}
                     </button>
                   ))}
                 </div>
@@ -853,109 +879,6 @@ export default function StaffStudentsPage() {
                     })}
                   </div>
                 </>
-              )}
-            </div>
-
-            {/* ── 수강료 정보 ── */}
-            <div className="card p-4">
-              <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-                <h3 className="font-semibold text-gray-800">수강료 정보</h3>
-                {!selected.tuitionPaid && (
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={openEditPayment}
-                      className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-all flex items-center gap-1"
-                    >
-                      ✏️ 납부메시지 수정
-                    </button>
-                    <button
-                      onClick={sendWebhook}
-                      disabled={sending}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center gap-1"
-                    >
-                      {sending ? '⏳ 발송 중...' : '📤 납부 요청 문자 발송'}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* 납부 기한 + 해당 수강 기간 */}
-              <div className={`flex items-start gap-3 p-3 rounded-lg ${
-                selected.tuitionPaid ? 'bg-green-50 border border-green-100' : 'bg-red-50 border border-red-100'
-              }`}>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-gray-700">
-                      납부 기한: {selected.tuitionDueDate}
-                    </span>
-                    {tuitionPeriod && (
-                      <span className="text-xs text-gray-400 bg-white border border-gray-200 px-2 py-0.5 rounded">
-                        ({tuitionPeriod.start} ~ {tuitionPeriod.end})
-                      </span>
-                    )}
-                  </div>
-                  <div className={`text-sm mt-1 font-medium ${
-                    selected.tuitionPaid ? 'text-green-600' : 'text-red-500'
-                  }`}>
-                    {selected.tuitionPaid ? '✓ 납부 완료' : '✗ 미납 상태'}
-                  </div>
-                </div>
-              </div>
-
-              {/* 납부메시지 / 웹훅 편집 패널 */}
-              {editingPayment && (
-                <div className="mt-3 border border-indigo-200 rounded-xl p-3 bg-indigo-50">
-                  <div className="mb-2.5">
-                    <label className="block text-xs font-semibold text-indigo-700 mb-1">
-                      📡 웹훅 주소 (Make / Zapier)
-                    </label>
-                    <input
-                      className="w-full px-3 py-1.5 text-xs border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-400"
-                      placeholder="https://hook.make.com/..."
-                      value={tempWebhook}
-                      onChange={e => setTempWebhook(e.target.value)}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="block text-xs font-semibold text-indigo-700 mb-1">
-                      💬 납부 요청 메시지
-                      <span className="font-normal text-indigo-400 ml-1">
-                        (변수: {'{학생명}'} {'{미납기간}'} {'{납부기한}'})
-                      </span>
-                    </label>
-                    <textarea
-                      className="w-full px-3 py-2 text-xs border border-indigo-200 rounded-lg bg-white focus:outline-none focus:border-indigo-400 resize-none leading-relaxed"
-                      rows={5}
-                      value={tempMsg}
-                      onChange={e => setTempMsg(e.target.value)}
-                    />
-                    {/* 미리보기 */}
-                    {selected && (
-                      <div className="mt-1.5 p-2 bg-white border border-dashed border-indigo-200 rounded-lg text-[11px] text-gray-500 whitespace-pre-line leading-relaxed">
-                        <span className="text-indigo-400 font-semibold block mb-1">미리보기</span>
-                        {tempMsg
-                          .replace(/{학생명}/g,  selected.name)
-                          .replace(/{미납기간}/g, tuitionPeriod ? `${tuitionPeriod.start} ~ ${tuitionPeriod.end}` : '')
-                          .replace(/{납부기한}/g, selected.tuitionDueDate)
-                        }
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      onClick={() => setEditingPayment(false)}
-                      className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-white transition-all"
-                    >
-                      취소
-                    </button>
-                    <button
-                      onClick={savePayment}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-all"
-                    >
-                      저장
-                    </button>
-                  </div>
-                </div>
               )}
             </div>
 

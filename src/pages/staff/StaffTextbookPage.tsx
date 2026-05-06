@@ -146,7 +146,7 @@ export default function StaffTextbookPage() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs">출판사</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs">과목</th>
                 <th className="text-right px-4 py-3 font-semibold text-gray-500 text-xs">가격</th>
-                <th className="text-center px-4 py-3 font-semibold text-gray-500 text-xs">관리</th>
+                <th className="text-center px-4 py-3 font-semibold text-gray-500 text-xs">삭제</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -166,9 +166,16 @@ export default function StaffTextbookPage() {
                 };
                 const subjectCls = tb.subject ? (subjectColors[tb.subject] ?? 'bg-gray-50 text-gray-500 border-gray-200') : '';
                 return (
-                  <tr key={tb.id} className="hover:bg-gray-50/60 transition-colors">
+                  /* 행 클릭 → 수정 폼 열기 */
+                  <tr key={tb.id}
+                    className="hover:bg-indigo-50/40 transition-colors cursor-pointer"
+                    title="클릭하여 수정"
+                    onClick={() => handleEdit(tb)}>
                     <td className="px-4 py-3">
-                      <span className="font-medium text-gray-800">{tb.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-gray-800">{tb.name}</span>
+                        <span className="text-[10px] text-indigo-400 opacity-0 group-hover:opacity-100">✏️</span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{tb.publisher ?? '—'}</td>
                     <td className="px-4 py-3">
@@ -182,20 +189,12 @@ export default function StaffTextbookPage() {
                       {tb.price.toLocaleString()}원
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex justify-center gap-1.5">
-                        <button
-                          onClick={() => handleEdit(tb)}
-                          className="px-2.5 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
-                        >
-                          수정
-                        </button>
-                        <button
-                          onClick={() => handleDelete(tb.id)}
-                          className="px-2.5 py-1 text-xs font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
-                        >
-                          삭제
-                        </button>
-                      </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDelete(tb.id); }}
+                        className="px-2.5 py-1 text-xs font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        삭제
+                      </button>
                     </td>
                   </tr>
                 );

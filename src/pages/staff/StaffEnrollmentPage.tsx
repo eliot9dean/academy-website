@@ -9,11 +9,40 @@ export default function StaffEnrollmentPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [smsText, setSmsText] = useState('');
 
+  // 테이블 필터
+  const [filterGrade,  setFilterGrade]  = useState('');
+  const [filterSchool, setFilterSchool] = useState('');
+  const [filterPeriod, setFilterPeriod] = useState(''); // 'lt3m' | 'lt6m' | 'lt1y' | 'ge1y'
+  const [filterReason, setFilterReason] = useState('');
+
   const [students] = useTableData<Student>('students');
+
+  const getEnrollMonths = (s: Student) => {
+    const start = new Date(s.enrollDate);
+    const end = s.withdrawDate ? new Date(s.withdrawDate) : new Date();
+    return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30));
+  };
 
   const filtered = students
     .filter(s => statusFilter === 'all' ? true : s.status === statusFilter)
-    .filter(s => s.name.includes(search) || s.school.includes(search));
+    .filter(s => s.name.includes(search) || s.school.includes(search))
+    .filter(s => !filterGrade  || s.grade  === filterGrade)
+    .filter(s => !filterSchool || s.school === filterSchool)
+    .filter(s => !filterPeriod || (() => {
+      const m = getEnrollMonths(s);
+      if (filterPeriod === 'lt3m') return m < 3;
+      if (filterPeriod === 'lt6m') return m >= 3 && m < 6;
+      if (filterPeriod === 'lt1y') return m >= 6 && m < 12;
+      if (filterPeriod === 'ge1y') return m >= 12;
+      return true;
+    })())
+    .filter(s => !filterReason || s.withdrawReason === filterReason);
+
+  // 필터 옵션 — 전체 학생 기준
+  const allGrades   = [...new Set(students.map(s => s.grade))].sort();
+  const allSchools  = [...new Set(students.map(s => s.school))].sort();
+  const allReasons  = [...new Set(students.filter(s => s.withdrawReason).map(s => s.withdrawReason!))].sort();
+  const hasFilters  = !!(filterGrade || filterSchool || filterPeriod || filterReason);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -22,12 +51,6 @@ export default function StaffEnrollmentPage() {
       else next.add(id);
       return next;
     });
-  };
-
-  const getEnrollMonths = (s: Student) => {
-    const start = new Date(s.enrollDate);
-    const end = s.withdrawDate ? new Date(s.withdrawDate) : new Date();
-    return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30));
   };
 
   const enrolledCount  = students.filter(s => s.status === 'enrolled').length;
@@ -49,25 +72,60 @@ export default function StaffEnrollmentPage() {
         </button>
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-3 mb-4 flex-wrap">
+      {/* 상태 필터 + 검색 */}
+      <div className="flex gap-3 mb-3 flex-wrap items-center">
         <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
           {(['all', 'enrolled', 'withdrawn'] as const).map(f => (
-            <button
-              key={f}
-              onClick={() => setStatusFilter(f)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${statusFilter === f ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
-            >
+            <button key={f} onClick={() => setStatusFilter(f)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${statusFilter === f ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}>
               {f === 'all' ? '전체' : f === 'enrolled' ? '재원' : '퇴원'}
             </button>
           ))}
         </div>
-        <input
-          className="flex-1 min-w-[200px] px-3 py-2 border border-gray-200 rounded-lg text-sm"
-          placeholder="학생명, 학교 검색..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+        {/* 검색란 — 배경 + 돋보기 아이콘 */}
+        <div className="relative flex-1 min-w-[220px]">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">🔍</span>
+          <input
+            className="w-full pl-9 pr-3 py-2 border-2 border-gray-300 rounded-lg text-sm bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            placeholder="학생명, 학교 검색..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* 테이블 필터 행 */}
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
+        <select value={filterGrade} onChange={e => setFilterGrade(e.target.value)}
+          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-white text-gray-600 focus:outline-none focus:border-blue-300 cursor-pointer">
+          <option value="">전체 학년</option>
+          {allGrades.map(g => <option key={g} value={g}>{g}</option>)}
+        </select>
+        <select value={filterSchool} onChange={e => setFilterSchool(e.target.value)}
+          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-white text-gray-600 focus:outline-none focus:border-blue-300 cursor-pointer">
+          <option value="">전체 학교</option>
+          {allSchools.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={filterPeriod} onChange={e => setFilterPeriod(e.target.value)}
+          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-white text-gray-600 focus:outline-none focus:border-blue-300 cursor-pointer">
+          <option value="">전체 재원기간</option>
+          <option value="lt3m">3개월 미만</option>
+          <option value="lt6m">3~6개월</option>
+          <option value="lt1y">6개월~1년</option>
+          <option value="ge1y">1년 이상</option>
+        </select>
+        <select value={filterReason} onChange={e => setFilterReason(e.target.value)}
+          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-white text-gray-600 focus:outline-none focus:border-blue-300 cursor-pointer">
+          <option value="">전체 퇴원사유</option>
+          {allReasons.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        {hasFilters && (
+          <button onClick={() => { setFilterGrade(''); setFilterSchool(''); setFilterPeriod(''); setFilterReason(''); }}
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors">
+            필터 초기화
+          </button>
+        )}
+        <span className="ml-auto text-xs text-gray-400">{filtered.length}명</span>
       </div>
 
       {/* Table */}

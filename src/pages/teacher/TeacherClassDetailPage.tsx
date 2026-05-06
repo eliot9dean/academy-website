@@ -3386,16 +3386,17 @@ export default function TeacherClassDetailPage() {
             );
 
             return (
-              <div key={examType} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* 분야별 성취도 (기간 평균 방사형) */}
-                <div className="card p-4">
+              /* 성취도(60%) | 학생점수비교(40%) 비율 레이아웃 */
+              <div key={examType} className="flex gap-4">
+                {/* 분야별 성취도 (기간 평균 방사형) — 넓게 */}
+                <div className="card p-4" style={{ flex: '3' }}>
                   <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
                     <h3 className="font-semibold text-gray-800 text-sm">{typeLabel}시험 분야별 성취도</h3>
                     <PeriodCtrl />
                   </div>
                   <p className="text-xs text-gray-400 mb-3">기간 내 분야별 평균 · 오버 시 반평균 비교</p>
                   {studentFieldAvg.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       {studentFieldAvg.map(student => (
                         <div key={student.name}>
                           <div className="text-xs font-bold text-center mb-1" style={{ color: student.color }}>{student.name}</div>
@@ -3430,7 +3431,7 @@ export default function TeacherClassDetailPage() {
                 </div>
 
                 {/* 분야별 학생점수 비교 (기간 평균) */}
-                <div className="card p-4">
+                <div className="card p-4" style={{ flex: '2' }}>
                   <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
                     <h3 className="font-semibold text-gray-800 text-sm">{typeLabel}시험 분야별 학생점수 비교</h3>
                     <PeriodCtrl />
