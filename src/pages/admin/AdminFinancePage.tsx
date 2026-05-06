@@ -197,33 +197,10 @@ export default function AdminFinancePage() {
       .sort((a, b) => b.reg - a.reg);
   }, [periodConsultations]);
 
-  // ── 개선 시나리오 시뮬레이션 ────────────────────────────────────────────
-  const scenarios = useMemo(() => {
-    if (income === 0) return [];
-    return [
-      {
-        icon: '👥', title: '학생 5명 추가 모집',
-        desc: `현 ARPU ${formatKRW(arpu)} 기준`,
-        after: income + arpu * 5 - fixed - variable,
-        delta: arpu * 5,
-        color: '#2563EB', bg: '#EFF6FF',
-      },
-      {
-        icon: '✂️', title: '변동비 10% 절감',
-        desc: `절감액 ${formatKRW(Math.round(variable * 0.1))}`,
-        after: income - fixed - variable * 0.9,
-        delta: Math.round(variable * 0.1),
-        color: '#7C3AED', bg: '#F5F3FF',
-      },
-      {
-        icon: '📈', title: '수강료 5% 인상',
-        desc: `추가 수입 ${formatKRW(Math.round(income * 0.05))}`,
-        after: income * 1.05 - fixed - variable,
-        delta: Math.round(income * 0.05),
-        color: '#16A34A', bg: '#F0FDF4',
-      },
-    ];
-  }, [income, arpu, fixed, variable]);
+  // ── 개선 시나리오 직접 입력 ────────────────────────────────────────────
+  const [scStudentDelta, setScStudentDelta] = useState(5);     // 학생 수 증감 (명)
+  const [scVariablePct,  setScVariablePct]  = useState(-10);   // 변동비 증감 % (음수=절감)
+  const [scTuitionPct,   setScTuitionPct]   = useState(5);     // 수강료 증감 %
 
   // ── 상세 레코드 ─────────────────────────────────────────────────────────
   const incRecs = useMemo(() => periodFin.filter(f => f.type === 'income').sort((a, b) => b.date.localeCompare(a.date)), [periodFin]);
@@ -319,6 +296,9 @@ export default function AdminFinancePage() {
     const varRatio = income > 0 ? Math.round(variable / income * 100) : 0;
     if (varRatio > 30) list.push({ type: 'warn', text: `변동비 비율 ${varRatio}% — 매출 대비 변동비가 높습니다. 교재비·마케팅비 효율화를 검토하세요.` });
 
+    // 우수 → 주의 → 위험 → 검토 순 정렬
+    const ORDER: Record<string, number> = { good: 0, warn: 1, bad: 2, info: 3 };
+    list.sort((a, b) => (ORDER[a.type] ?? 9) - (ORDER[b.type] ?? 9));
     return list;
   }, [income, margin, fixed, variable, breakEvenStatus, breakEvenCount, enrolledCount, withdrawalRate,
       withdrawnInPeriod, newInPeriod, netChange, arpu, unpaidList, sourceData, criteria,
@@ -671,42 +651,118 @@ export default function AdminFinancePage() {
       </div>
 
       {/* ── 수익 개선 시나리오 ─────────────────────────────────────────────── */}
-      {scenarios.length > 0 && (
-        <div className="card p-4 mb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-sm">🎯</span>
-            <h3 className="text-sm font-bold" style={{ color: '#1E293B' }}>수익 개선 시나리오</h3>
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: '#FFF7ED', color: '#C2410C' }}>시뮬레이션</span>
+      {income > 0 && (() => {
+        const scStudentAfter = income + arpu * scStudentDelta - fixed - variable;
+        const scStudentDelta_ = arpu * scStudentDelta;
+
+        const scVariableAfter = income - fixed - variable * (1 + scVariablePct / 100);
+        const scVariableDelta_ = -Math.round(variable * (scVariablePct / 100));
+
+        const scTuitionAfter = income * (1 + scTuitionPct / 100) - fixed - variable;
+        const scTuitionDelta_ = Math.round(income * (scTuitionPct / 100));
+
+        const ScResult = ({ after, delta }: { after: number; delta: number }) => (
+          <div className="space-y-1.5 mt-3 pt-3 border-t" style={{ borderColor: '#E2E8F0' }}>
+            <div className="flex justify-between text-xs">
+              <span style={{ color: '#64748B' }}>현재 순이익</span>
+              <span className="font-semibold" style={{ color: net >= 0 ? '#16A34A' : '#EF4444' }}>{formatKRW(net)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span style={{ color: '#64748B' }}>변동 후 순이익</span>
+              <span className="font-bold" style={{ color: after >= 0 ? '#16A34A' : '#EF4444' }}>{formatKRW(Math.round(after))}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs font-bold px-3 py-1.5 rounded-lg"
+              style={{ background: delta >= 0 ? '#DCFCE7' : '#FEE2E2', color: delta >= 0 ? '#15803D' : '#991B1B' }}>
+              <span>순이익 변동</span>
+              <span>{delta >= 0 ? '+' : ''}{formatKRW(Math.round(delta))}</span>
+            </div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            {scenarios.map(sc => (
-              <div key={sc.title} className="rounded-xl p-4" style={{ background: sc.bg, border: `1px solid ${sc.bg}` }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg">{sc.icon}</span>
-                  <div>
-                    <div className="text-xs font-bold" style={{ color: sc.color }}>{sc.title}</div>
-                    <div className="text-[10px]" style={{ color: '#94A3B8' }}>{sc.desc}</div>
-                  </div>
+        );
+
+        const spinBtn = (onClick: () => void, label: string, color: string, bg: string) => (
+          <button onClick={onClick}
+            className="w-7 h-7 rounded-lg font-bold text-sm flex items-center justify-center flex-shrink-0 select-none"
+            style={{ background: bg, color }}>
+            {label}
+          </button>
+        );
+
+        return (
+          <div className="card p-4 mb-5">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-sm">🎯</span>
+              <h3 className="text-sm font-bold" style={{ color: '#1E293B' }}>수익 개선 시나리오</h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: '#FFF7ED', color: '#C2410C' }}>직접 입력 시뮬레이션</span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+              {/* 학생 수 조정 */}
+              <div className="rounded-xl p-4" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">👥</span>
+                  <div className="text-xs font-bold" style={{ color: '#2563EB' }}>학생 수 조정</div>
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span style={{ color: '#64748B' }}>현재 순이익</span>
-                    <span className="font-semibold" style={{ color: net >= 0 ? '#16A34A' : '#EF4444' }}>{formatKRW(net)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs border-t pt-1.5" style={{ borderColor: '#E2E8F0' }}>
-                    <span style={{ color: '#64748B' }}>개선 후 순이익</span>
-                    <span className="font-bold" style={{ color: sc.after >= 0 ? '#16A34A' : '#EF4444' }}>{formatKRW(Math.round(sc.after))}</span>
-                  </div>
-                  <div className="text-center text-xs font-bold py-1 rounded-lg mt-1"
-                    style={{ background: sc.color, color: '#fff' }}>
-                    +{formatKRW(sc.delta)} 순이익 증가
-                  </div>
+                <div className="text-[10px] mb-1 font-semibold" style={{ color: '#64748B' }}>학생 수 증감 (명)</div>
+                <div className="flex items-center gap-2">
+                  {spinBtn(() => setScStudentDelta(v => v - 1), '−', '#2563EB', '#DBEAFE')}
+                  <input type="number" className="flex-1 text-center px-2 py-1.5 rounded-lg text-sm font-bold"
+                    style={{ border: '1px solid #BFDBFE', color: '#1E293B', outline: 'none', background: '#fff' }}
+                    value={scStudentDelta}
+                    onChange={e => setScStudentDelta(Number(e.target.value))} />
+                  {spinBtn(() => setScStudentDelta(v => v + 1), '+', '#2563EB', '#DBEAFE')}
                 </div>
+                <div className="text-[10px] mt-1" style={{ color: '#94A3B8' }}>현 ARPU {formatKRW(arpu)} 기준</div>
+                <ScResult after={scStudentAfter} delta={scStudentDelta_} />
               </div>
-            ))}
+
+              {/* 변동비 조정 */}
+              <div className="rounded-xl p-4" style={{ background: '#F5F3FF', border: '1px solid #DDD6FE' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">✂️</span>
+                  <div className="text-xs font-bold" style={{ color: '#7C3AED' }}>변동비 조정</div>
+                </div>
+                <div className="text-[10px] mb-1 font-semibold" style={{ color: '#64748B' }}>변동비 증감 (%, 음수=절감)</div>
+                <div className="flex items-center gap-2">
+                  {spinBtn(() => setScVariablePct(v => v - 1), '−', '#7C3AED', '#EDE9FE')}
+                  <div className="flex-1 relative">
+                    <input type="number" className="w-full text-center px-2 py-1.5 rounded-lg text-sm font-bold pr-6"
+                      style={{ border: '1px solid #DDD6FE', color: '#1E293B', outline: 'none', background: '#fff' }}
+                      value={scVariablePct}
+                      onChange={e => setScVariablePct(Number(e.target.value))} />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs" style={{ color: '#94A3B8' }}>%</span>
+                  </div>
+                  {spinBtn(() => setScVariablePct(v => v + 1), '+', '#7C3AED', '#EDE9FE')}
+                </div>
+                <div className="text-[10px] mt-1" style={{ color: '#94A3B8' }}>현 변동비 {formatKRW(variable)} 기준</div>
+                <ScResult after={scVariableAfter} delta={scVariableDelta_} />
+              </div>
+
+              {/* 수강료 조정 */}
+              <div className="rounded-xl p-4" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">📈</span>
+                  <div className="text-xs font-bold" style={{ color: '#16A34A' }}>수강료 조정</div>
+                </div>
+                <div className="text-[10px] mb-1 font-semibold" style={{ color: '#64748B' }}>수강료 증감 (%, 음수=인하)</div>
+                <div className="flex items-center gap-2">
+                  {spinBtn(() => setScTuitionPct(v => v - 1), '−', '#16A34A', '#DCFCE7')}
+                  <div className="flex-1 relative">
+                    <input type="number" className="w-full text-center px-2 py-1.5 rounded-lg text-sm font-bold pr-6"
+                      style={{ border: '1px solid #BBF7D0', color: '#1E293B', outline: 'none', background: '#fff' }}
+                      value={scTuitionPct}
+                      onChange={e => setScTuitionPct(Number(e.target.value))} />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs" style={{ color: '#94A3B8' }}>%</span>
+                  </div>
+                  {spinBtn(() => setScTuitionPct(v => v + 1), '+', '#16A34A', '#DCFCE7')}
+                </div>
+                <div className="text-[10px] mt-1" style={{ color: '#94A3B8' }}>현 총수입 {formatKRW(income)} 기준</div>
+                <ScResult after={scTuitionAfter} delta={scTuitionDelta_} />
+              </div>
+
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── 차트 ───────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
