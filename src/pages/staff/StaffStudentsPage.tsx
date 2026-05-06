@@ -610,7 +610,11 @@ export default function StaffStudentsPage() {
                               // classHistory 업데이트
                               setClassHistory(prev => {
                                 if (isAdding) {
-                                  // 새 반 추가: 신규 이력 레코드 생성
+                                  // 이미 진행 중 이력이 있으면 중복 추가 안 함
+                                  const alreadyOpen = prev.some(h =>
+                                    h.studentId === selected.id && h.classId === c.id && h.endDate === null
+                                  );
+                                  if (alreadyOpen) return prev;
                                   const newRec: ClassHistoryRecord = {
                                     id: `ch_${Date.now()}`,
                                     studentId: selected.id,

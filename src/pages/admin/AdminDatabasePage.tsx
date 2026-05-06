@@ -756,6 +756,36 @@ export default function AdminDatabasePage() {
             return { ...cls, studentIds: [...sids, sid] };
           return cls;
         });
+        // ── classHistory 자동 업데이트 ──────────────────────────────
+        if (removed.length > 0 || added.length > 0) {
+          const today = new Date().toISOString().slice(0, 10);
+          // 제거된 반: 진행 중 이력 종료
+          next.classHistory = (prev.classHistory ?? []).map((h: Row) => {
+            if (h.studentId === sid && removed.includes(h.classId as string) && h.endDate === null) {
+              return { ...h, endDate: today };
+            }
+            return h;
+          });
+          // 추가된 반: 신규 이력 생성 (이미 진행 중 이력 있으면 중복 추가 안 함)
+          for (const cid of added) {
+            const alreadyOpen = (next.classHistory ?? []).some(
+              (h: Row) => h.studentId === sid && h.classId === cid && h.endDate === null
+            );
+            if (alreadyOpen) continue;
+            const cls = (next.classes ?? []).find((c: Row) => c.id === cid);
+            next.classHistory = [
+              ...(next.classHistory ?? []),
+              {
+                id: `ch_${Date.now()}_${cid}`,
+                studentId: sid,
+                classId: cid,
+                className: cls ? (cls.name as string) : cid,
+                startDate: today,
+                endDate: null,
+              },
+            ];
+          }
+        }
       }
 
       if (activeTable === 'classes') {

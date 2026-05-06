@@ -50,7 +50,7 @@ export const mockClasses: ClassInfo[] = [
   { id: 'c1', name: '중1 영어 A반', teacherId: 'u2', subject: '영어', days: ['월','수','금'], startTime: '16:00', endTime: '17:30', studentIds: ['s1','s2','s6','s9','s11','s15'], grade: '중1' },
   { id: 'c2', name: '중2 수학 B반', teacherId: 'u3', subject: '수학', days: ['화','목'],     startTime: '17:00', endTime: '19:00', studentIds: ['s3','s4','s12'],              grade: '중2' },
   { id: 'c3', name: '중3 국어 C반', teacherId: 'u4', subject: '국어', days: ['월','목'],     startTime: '19:00', endTime: '21:00', studentIds: ['s1','s5','s10','s13'],        grade: '중3' },
-  { id: 'c4', name: '중1 수학 D반', teacherId: 'u2', subject: '수학', days: ['화','금'],     startTime: '18:00', endTime: '19:30', studentIds: ['s6','s15'],                   grade: '중1' },
+  { id: 'c4', name: '중1 영어 D반', teacherId: 'u2', subject: '영어', days: ['화','수','목'], startTime: '11:00', endTime: '12:30', studentIds: ['s6','s15'],                   grade: '중1' },
 ];
 
 // ─── ATTENDANCE ───────────────────────────────────────────────

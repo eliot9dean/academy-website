@@ -72,6 +72,28 @@ function initDB(): Record<string, Row[]> {
           }
         }
       }
+      // ── days 배열 정규화: '화금' 같은 합산 문자열 → ['화','금'] ──
+      const DAY_OPTIONS = ['월','화','수','목','금','토','일'];
+      if (stored.classes) {
+        const fixedClasses = stored.classes.map((cls: Row) => {
+          const raw = cls.days;
+          const arr: string[] = Array.isArray(raw)
+            ? (raw as string[])
+            : typeof raw === 'string' && raw
+              ? raw.split(',').map((s: string) => s.trim()).filter(Boolean)
+              : [];
+          const fixed = [...new Set(arr.flatMap((d: string) =>
+            DAY_OPTIONS.includes(d) ? [d] : DAY_OPTIONS.filter(day => d.includes(day))
+          ))];
+          if (JSON.stringify(fixed) !== JSON.stringify(arr)) {
+            patched = true;
+            return { ...cls, days: fixed };
+          }
+          return cls;
+        });
+        if (patched) stored.classes = fixedClasses;
+      }
+
       _db = stored;
       if (patched) window.localStorage.setItem(DB_LS_KEY, JSON.stringify(stored));
     } else {
