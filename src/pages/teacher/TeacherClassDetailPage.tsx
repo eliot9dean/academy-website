@@ -253,6 +253,7 @@ export default function TeacherClassDetailPage() {
   // ── 성적표 ────────────────────────────────────────────────────────────────
   const [reportGenerated,  setReportGenerated]  = useState(false);
   const [reportChecked,    setReportChecked]    = useState<Record<string, boolean>>({});
+  const [reportMonth,      setReportMonth]      = useState(todayStr.slice(0, 7)); // YYYY-MM
   const reportComments = clsSetting?.reportComments ?? {};
   const setReportComments = (updater: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
     setClassSettingsDB(prev => {
@@ -2411,21 +2412,28 @@ export default function TeacherClassDetailPage() {
 
       {/* ── TAB: 성적표 (모바일 최적화, 19.5:9) ── */}
       {activeTab === 'report_card' && (() => {
-        const rptEnd          = todayStr;
-        const thisMonthStart  = todayStr.slice(0, 7) + '-01'; // 이달 1일
-        const rptStart        = dateRelative(180); // 데일리/주간 후보풀 (최근 180일)
-        const m3Start         = (() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return fmtDate(d); })();
+        // ── 선택 월 기간 계산 ──────────────────────────────────────────────
+        const [rptY, rptM] = reportMonth.split('-').map(Number);
+        const rptMonthStart = `${reportMonth}-01`;
+        const rptMonthEnd   = `${reportMonth}-${String(new Date(rptY, rptM, 0).getDate()).padStart(2, '0')}`;
 
-        const clsDailyAll  = dbTestScores.filter(t => t.classId === classId && t.type === 'daily'   && t.date >= rptStart && t.date <= rptEnd);
-        const clsWeekly    = dbTestScores.filter(t => t.classId === classId && t.type === 'weekly'  && t.date >= rptStart && t.date <= rptEnd).sort((a,b)=>a.date.localeCompare(b.date));
-        const clsMonthly   = dbTestScores.filter(t => t.classId === classId && t.type === 'monthly' && t.date >= m3Start).sort((a,b)=>a.date.localeCompare(b.date));
-        // 출석·과제는 이달 자료만
-        const clsAtt       = dbAttendance.filter(a => a.classId === classId && a.date >= thisMonthStart && a.date <= rptEnd);
-        const clsHw        = dbHomework.filter(h => h.classId === classId && h.date >= thisMonthStart && h.date <= rptEnd);
+        // 월간 평가: 선택월 포함 최근 3개월 시작
+        const m3StartDate = new Date(rptY, rptM - 3, 1);
+        const m3Start = `${m3StartDate.getFullYear()}-${String(m3StartDate.getMonth() + 1).padStart(2, '0')}-01`;
 
-        // 데일리 최근 10회 / 주간 최근 5회 / 월간 최근 3회
-        const dailyDates   = [...new Set(clsDailyAll.map(t=>t.date))].sort().slice(-10);
-        const weeklyDates  = [...new Set(clsWeekly.map(t=>t.date))].sort().slice(-5);
+        // ── 데이터 필터링 ──────────────────────────────────────────────────
+        // 데일리·주간: 선택 월 전체
+        const clsDailyAll  = dbTestScores.filter(t => t.classId === classId && t.type === 'daily'   && t.date >= rptMonthStart && t.date <= rptMonthEnd);
+        const clsWeekly    = dbTestScores.filter(t => t.classId === classId && t.type === 'weekly'  && t.date >= rptMonthStart && t.date <= rptMonthEnd).sort((a,b)=>a.date.localeCompare(b.date));
+        // 월간: 선택월 포함 최근 3개월
+        const clsMonthly   = dbTestScores.filter(t => t.classId === classId && t.type === 'monthly' && t.date >= m3Start && t.date <= rptMonthEnd).sort((a,b)=>a.date.localeCompare(b.date));
+        // 출석·과제: 선택 월
+        const clsAtt       = dbAttendance.filter(a => a.classId === classId && a.date >= rptMonthStart && a.date <= rptMonthEnd);
+        const clsHw        = dbHomework.filter(h => h.classId === classId && h.date >= rptMonthStart && h.date <= rptMonthEnd);
+
+        // 선택 월 전체 날짜 (slice 없음) / 월간은 최근 3개월
+        const dailyDates   = [...new Set(clsDailyAll.map(t=>t.date))].sort();
+        const weeklyDates  = [...new Set(clsWeekly.map(t=>t.date))].sort();
         const monthlyDates = [...new Set(clsMonthly.map(t=>t.date))].sort().slice(-3);
 
         // ── 반 평균 (날짜별) ──────────────────────────────────────────────
@@ -2489,7 +2497,7 @@ export default function TeacherClassDetailPage() {
             for (const stu of targets) {
               await fetch(webhookUrl, { method:'POST', headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({
-                  student: stu.name, class: cls.name, period:`${rptStart}~${rptEnd}`,
+                  student: stu.name, class: cls.name, period:`${rptMonthStart}~${rptMonthEnd}`, reportMonth,
                   weekly: weeklyDates.map(d=>{ const t=clsWeekly.find(x=>x.studentId===stu.id&&x.date===d); return {date:d,name:t?.testName,score:t?.score,subScores:t?.subScores}; }),
                   monthly: monthlyDates.map(d=>{ const t=clsMonthly.find(x=>x.studentId===stu.id&&x.date===d); return {date:d,name:t?.testName,score:t?.score,subScores:t?.subScores}; }),
                   comment: reportComments[stu.id]??'',
@@ -2514,11 +2522,22 @@ export default function TeacherClassDetailPage() {
                     전체 선택 ({students.filter(s=>reportChecked[s.id]).length}/{students.length}명)
                   </label>
                 </div>
-                <button onClick={handleSendReport} disabled={sendingReport}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm disabled:opacity-50"
-                  style={{background:'#059669',color:'#fff'}}>
-                  {sendingReport ? '⏳ 발송 중...' : '📤 성적표 발송'}
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* 월 선택기 */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-gray-500">📅 기준 월</span>
+                    <input type="month"
+                      className="px-2.5 py-1.5 border border-gray-200 rounded-xl text-sm font-semibold"
+                      style={{ color: '#4F46E5' }}
+                      value={reportMonth}
+                      onChange={e => setReportMonth(e.target.value)} />
+                  </div>
+                  <button onClick={handleSendReport} disabled={sendingReport}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm disabled:opacity-50"
+                    style={{background:'#059669',color:'#fff'}}>
+                    {sendingReport ? '⏳ 발송 중...' : '📤 성적표 발송'}
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500 shrink-0">웹훅 URL</span>
@@ -2526,7 +2545,9 @@ export default function TeacherClassDetailPage() {
                   placeholder="https://hooks.example.com/..."
                   value={webhookUrl} onChange={e=>setWebhookUrl(e.target.value)} />
               </div>
-              <div className="text-xs text-gray-400">데일리 최근 {dailyDates.length}회 · 주간 최근 {weeklyDates.length}회 · 월간 최근 {monthlyDates.length}회 · 출석/과제 {thisMonthStart.slice(0,7)}</div>
+              <div className="text-xs text-gray-400">
+                데일리 {dailyDates.length}회 · 주간 {weeklyDates.length}회 · 월간(3개월) {monthlyDates.length}회 · 출석/과제 {reportMonth}
+              </div>
             </div>
 
             {/* ── 학생별 성적표 (모바일 카드: max-w-sm 중앙정렬) ── */}
@@ -2597,7 +2618,10 @@ export default function TeacherClassDetailPage() {
                         <div className="text-white/75 text-sm">{stu.grade} · {cls.name}</div>
                       </div>
                     </div>
-                    <div className="text-white/60 text-xs mt-2">{rptStart} ~ {rptEnd}</div>
+                    <div className="text-white/60 text-xs mt-2">
+                      재원기간 {stu.enrollDate} ~ {stu.withdrawDate ?? todayStr}
+                      <span className="ml-2 opacity-70">({reportMonth.replace('-', '년 ')}월 기준)</span>
+                    </div>
                   </div>
 
                   <div className="flex-1 overflow-y-auto" style={{maxHeight: 820}}>
