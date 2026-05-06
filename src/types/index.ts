@@ -213,6 +213,7 @@ export interface ClassSettings {
   id: string;       // = classId
   classId: string;
   examFields: string[];                   // 시험 분야 목록
+  examMaxScore?: string;                  // 분야별 만점 (기본 100)
   attMsgTemplates: Record<string, string>; // AttendanceStatus → 메시지 템플릿
   reportComments: Record<string, string>;  // studentId → 코멘트
 }

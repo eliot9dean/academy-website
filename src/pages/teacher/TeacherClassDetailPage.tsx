@@ -216,7 +216,6 @@ export default function TeacherClassDetailPage() {
   const [examName,       setExamName]       = useState('');
   const [examType,       setExamType]       = useState<'weekly' | 'monthly'>('weekly');
   const [examScores,     setExamScores]     = useState<Record<string, string>>({});
-  const [examMaxScore,   setExamMaxScore]   = useState('100');
   const [examHistStart,  setExamHistStart]  = useState('');
   const [examHistEnd,    setExamHistEnd]    = useState('');
   const [examHistView,   setExamHistView]   = useState<'list' | 'chart'>('list');
@@ -227,17 +226,24 @@ export default function TeacherClassDetailPage() {
   const [editExamScores,    setEditExamScores]    = useState<Record<string, string>>({});
   const [editExamSubScores, setEditExamSubScores] = useState<Record<string, Record<string, string>>>({});
   const [editExamMaxScore,  setEditExamMaxScore]  = useState('100');
-  // ── 시험 분야 (DB 저장) ───────────────────────────────────────────────────
-  const examFields = clsSetting?.examFields ?? [];
-  const setExamFields = (updater: string[] | ((prev: string[]) => string[])) => {
+  // ── 시험 분야 + 만점 (DB 저장 — 반별 고정 설정) ─────────────────────────
+  const examFields    = clsSetting?.examFields   ?? [];
+  const examMaxScore  = clsSetting?.examMaxScore ?? '100';
+
+  /** classSettings 부분 업데이트 헬퍼 */
+  const patchClsSetting = (patch: Partial<ClassSettings>) => {
     setClassSettingsDB(prev => {
       const ex = prev.find(s => s.classId === classId);
-      const current = ex?.examFields ?? [];
-      const next = typeof updater === 'function' ? updater(current) : updater;
-      if (ex) return prev.map(s => s.classId === classId ? { ...s, examFields: next } : s);
-      return [...prev, { id: classId!, classId: classId!, examFields: next, attMsgTemplates: {}, reportComments: {} }];
+      if (ex) return prev.map(s => s.classId === classId ? { ...s, ...patch } : s);
+      return [...prev, { id: classId!, classId: classId!, examFields: [], attMsgTemplates: {}, reportComments: {}, ...patch }];
     });
   };
+
+  const setExamFields = (updater: string[] | ((prev: string[]) => string[])) => {
+    const next = typeof updater === 'function' ? updater(examFields) : updater;
+    patchClsSetting({ examFields: next });
+  };
+  const setExamMaxScore = (v: string) => patchClsSetting({ examMaxScore: v });
   const [examFieldInput, setExamFieldInput] = useState('');
   const [examSubScores,  setExamSubScores]  = useState<Record<string, Record<string, string>>>({});
   const [editingFieldIdx,   setEditingFieldIdx]   = useState<number | null>(null);
@@ -1858,10 +1864,15 @@ export default function TeacherClassDetailPage() {
 
             {/* ── 시험 분야 설정 ── */}
             <div className="mt-3 pt-3 border-t border-gray-100">
-              <label className="text-sm font-medium text-gray-700">
-                시험 분야 설정
-                <span className="ml-1 text-xs text-gray-400 font-normal">(선택 — 분야별 점수를 따로 입력할 경우 추가)</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">
+                  시험 분야 설정
+                  <span className="ml-1 text-xs text-gray-400 font-normal">(선택 — 분야별 점수를 따로 입력할 경우 추가)</span>
+                </label>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: '#EEF2FF', color: '#4F46E5' }}>
+                  📌 반별 자동 저장
+                </span>
+              </div>
               <div className="flex gap-2 mt-1.5">
                 <input
                   className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
@@ -1977,7 +1988,7 @@ export default function TeacherClassDetailPage() {
                     );
                   })}
                   <button
-                    onClick={() => { setExamFields([]); setExamSubScores({}); }}
+                    onClick={() => { if (window.confirm('시험 분야를 모두 삭제하시겠습니까? 이 반의 분야 설정이 초기화됩니다.')) { setExamFields([]); setExamSubScores({}); } }}
                     className="px-2.5 py-1.5 bg-gray-100 text-gray-400 rounded-xl text-xs hover:bg-red-50 hover:text-red-400 font-medium"
                   >전체삭제</button>
                 </div>
