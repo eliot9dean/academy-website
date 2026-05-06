@@ -305,6 +305,10 @@ export default function TeacherClassDetailPage() {
   const [hwChartStart, setHwChartStart] = useState('');
   const [hwChartEnd,   setHwChartEnd]   = useState('');
 
+  // 분야별 학생점수 비교 — 선택 학생 필터 (주간/월간)
+  const [fieldWeeklyCompStudents,  setFieldWeeklyCompStudents]  = useState<string[]>([]);
+  const [fieldMonthlyCompStudents, setFieldMonthlyCompStudents] = useState<string[]>([]);
+
   const cls = dbClasses.find(c => c.id === classId);
   const students = cls
     ? (cls.studentIds as string[]).map(sid => dbStudents.find(s => s.id === sid)).filter(Boolean) as Student[]
@@ -3158,133 +3162,139 @@ export default function TeacherClassDetailPage() {
             )}
           </div>
 
-          {/* 주간시험 성적 추이 */}
-          <div className="card p-4">
-            <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-              <h3 className="font-semibold text-gray-800">주간시험 성적 추이</h3>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button onClick={() => { const e=new Date(); const s=new Date(); s.setMonth(s.getMonth()-1); setChartWeeklyStart(fmtDate(s)); setChartWeeklyEnd(fmtDate(e)); }}
-                  className="px-2 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600">1달</button>
-                <button onClick={() => { const e=new Date(); const s=new Date(); s.setMonth(s.getMonth()-3); setChartWeeklyStart(fmtDate(s)); setChartWeeklyEnd(fmtDate(e)); }}
-                  className="px-2 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600">3달</button>
-                <span className="text-gray-300">|</span>
-                <input type="date" className="px-2 py-1 border border-gray-200 rounded text-xs"
-                  value={chartWeeklyStart} onChange={e => setChartWeeklyStart(e.target.value)} />
-                <span className="text-xs text-gray-400">~</span>
-                <input type="date" className="px-2 py-1 border border-gray-200 rounded text-xs"
-                  value={chartWeeklyEnd} onChange={e => setChartWeeklyEnd(e.target.value)} />
-                {(chartWeeklyStart || chartWeeklyEnd) && (
-                  <button onClick={() => { setChartWeeklyStart(''); setChartWeeklyEnd(''); }}
-                    className="px-2 py-1 rounded bg-gray-100 text-gray-500 text-xs">초기화</button>
+          {/* 주간시험 성적 추이 | 월간시험 성적 추이 — 2열 나란히 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* 주간시험 성적 추이 */}
+            <div className="card p-4">
+              <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                <h3 className="font-semibold text-gray-800 text-sm">주간시험 성적 추이</h3>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <button onClick={() => { const e=new Date(); const s=new Date(); s.setMonth(s.getMonth()-1); setChartWeeklyStart(fmtDate(s)); setChartWeeklyEnd(fmtDate(e)); }}
+                    className="px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-600">1달</button>
+                  <button onClick={() => { const e=new Date(); const s=new Date(); s.setMonth(s.getMonth()-3); setChartWeeklyStart(fmtDate(s)); setChartWeeklyEnd(fmtDate(e)); }}
+                    className="px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-600">3달</button>
+                  <span className="text-gray-300 text-xs">|</span>
+                  <input type="date" className="px-1.5 py-0.5 border border-gray-200 rounded text-xs w-28"
+                    value={chartWeeklyStart} onChange={e => setChartWeeklyStart(e.target.value)} />
+                  <span className="text-xs text-gray-400">~</span>
+                  <input type="date" className="px-1.5 py-0.5 border border-gray-200 rounded text-xs w-28"
+                    value={chartWeeklyEnd} onChange={e => setChartWeeklyEnd(e.target.value)} />
+                  {(chartWeeklyStart || chartWeeklyEnd) && (
+                    <button onClick={() => { setChartWeeklyStart(''); setChartWeeklyEnd(''); }}
+                      className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-xs">✕</button>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mb-1.5">50~100% 구간 · 점선=반평균 · 이름 클릭=개인필터</p>
+              <div className="flex gap-1 flex-wrap mb-1.5">
+                {students.map((s, i) => (
+                  <button key={s.id}
+                    onClick={() => toggleStudent(setChartWeeklyStudents, s.id)}
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-all ${
+                      chartWeeklyStudents.length === 0 || chartWeeklyStudents.includes(s.id)
+                        ? 'text-white border-transparent'
+                        : 'bg-gray-100 text-gray-400 border-gray-200'
+                    }`}
+                    style={chartWeeklyStudents.length === 0 || chartWeeklyStudents.includes(s.id)
+                      ? { background: COLORS[i % COLORS.length] } : {}}>
+                    {s.name}
+                  </button>
+                ))}
+                {chartWeeklyStudents.length > 0 && (
+                  <button onClick={() => setChartWeeklyStudents([])}
+                    className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">전체</button>
                 )}
               </div>
-            </div>
-            <p className="text-xs text-gray-400 mb-2">50~100% 구간 표시 · 점선 = 반평균 · 이름 클릭으로 개인 표시/숨김</p>
-            <div className="flex gap-1 flex-wrap mb-2">
-              {students.map((s, i) => (
-                <button key={s.id}
-                  onClick={() => toggleStudent(setChartWeeklyStudents, s.id)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-                    chartWeeklyStudents.length === 0 || chartWeeklyStudents.includes(s.id)
-                      ? 'text-white border-transparent'
-                      : 'bg-gray-100 text-gray-400 border-gray-200'
-                  }`}
-                  style={chartWeeklyStudents.length === 0 || chartWeeklyStudents.includes(s.id)
-                    ? { background: COLORS[i % COLORS.length] } : {}}>
-                  {s.name}
-                </button>
-              ))}
-              {chartWeeklyStudents.length > 0 && (
-                <button onClick={() => setChartWeeklyStudents([])}
-                  className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">전체</button>
+              {weeklyOnlyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={weeklyOnlyData} margin={{ left: -10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <YAxis domain={[50, 100]} tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} />
+                    <Tooltip content={<LineChartTooltip />} />
+                    <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                    {students.filter(s => visibleWeeklyStudents.includes(s.id)).map((s, i) => (
+                      <Line key={s.id} type="monotone" dataKey={s.name} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 2 }} />
+                    ))}
+                    <Line type="monotone" dataKey="반평균" stroke="#1E293B" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-8">주간 시험 데이터가 없습니다</p>
               )}
             </div>
-            {weeklyOnlyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={weeklyOnlyData} margin={{ left: -10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                  <YAxis domain={[50, 100]} tick={{ fontSize: 11 }} tickFormatter={v => `${v}%`} />
-                  <Tooltip content={<LineChartTooltip />} />
-                  <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                  {students.filter(s => visibleWeeklyStudents.includes(s.id)).map((s, i) => (
-                    <Line key={s.id} type="monotone" dataKey={s.name} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />
-                  ))}
-                  <Line type="monotone" dataKey="반평균" stroke="#1E293B" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-sm text-gray-400 text-center py-8">주간 시험 데이터가 없습니다</p>
-            )}
-          </div>
 
-          {/* 월간시험 성적 추이 */}
-          <div className="card p-4">
-            <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-              <h3 className="font-semibold text-gray-800">월간시험 성적 추이</h3>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button onClick={() => { const e=new Date(); const s=new Date(); s.setMonth(s.getMonth()-3); setChartMonthlyStart(fmtDate(s)); setChartMonthlyEnd(fmtDate(e)); }}
-                  className="px-2 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600">3달</button>
-                <button onClick={() => { const e=new Date(); const s=new Date(); s.setMonth(s.getMonth()-6); setChartMonthlyStart(fmtDate(s)); setChartMonthlyEnd(fmtDate(e)); }}
-                  className="px-2 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600">6달</button>
-                <span className="text-gray-300">|</span>
-                <input type="date" className="px-2 py-1 border border-gray-200 rounded text-xs"
-                  value={chartMonthlyStart} onChange={e => setChartMonthlyStart(e.target.value)} />
-                <span className="text-xs text-gray-400">~</span>
-                <input type="date" className="px-2 py-1 border border-gray-200 rounded text-xs"
-                  value={chartMonthlyEnd} onChange={e => setChartMonthlyEnd(e.target.value)} />
-                {(chartMonthlyStart || chartMonthlyEnd) && (
-                  <button onClick={() => { setChartMonthlyStart(''); setChartMonthlyEnd(''); }}
-                    className="px-2 py-1 rounded bg-gray-100 text-gray-500 text-xs">초기화</button>
+            {/* 월간시험 성적 추이 */}
+            <div className="card p-4">
+              <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                <h3 className="font-semibold text-gray-800 text-sm">월간시험 성적 추이</h3>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <button onClick={() => { const e=new Date(); const s=new Date(); s.setMonth(s.getMonth()-3); setChartMonthlyStart(fmtDate(s)); setChartMonthlyEnd(fmtDate(e)); }}
+                    className="px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-600">3달</button>
+                  <button onClick={() => { const e=new Date(); const s=new Date(); s.setMonth(s.getMonth()-6); setChartMonthlyStart(fmtDate(s)); setChartMonthlyEnd(fmtDate(e)); }}
+                    className="px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-600">6달</button>
+                  <span className="text-gray-300 text-xs">|</span>
+                  <input type="date" className="px-1.5 py-0.5 border border-gray-200 rounded text-xs w-28"
+                    value={chartMonthlyStart} onChange={e => setChartMonthlyStart(e.target.value)} />
+                  <span className="text-xs text-gray-400">~</span>
+                  <input type="date" className="px-1.5 py-0.5 border border-gray-200 rounded text-xs w-28"
+                    value={chartMonthlyEnd} onChange={e => setChartMonthlyEnd(e.target.value)} />
+                  {(chartMonthlyStart || chartMonthlyEnd) && (
+                    <button onClick={() => { setChartMonthlyStart(''); setChartMonthlyEnd(''); }}
+                      className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-xs">✕</button>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mb-1.5">50~100% 구간 · 점선=반평균 · 이름 클릭=개인필터</p>
+              <div className="flex gap-1 flex-wrap mb-1.5">
+                {students.map((s, i) => (
+                  <button key={s.id}
+                    onClick={() => toggleStudent(setChartMonthlyStudents, s.id)}
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-all ${
+                      chartMonthlyStudents.length === 0 || chartMonthlyStudents.includes(s.id)
+                        ? 'text-white border-transparent'
+                        : 'bg-gray-100 text-gray-400 border-gray-200'
+                    }`}
+                    style={chartMonthlyStudents.length === 0 || chartMonthlyStudents.includes(s.id)
+                      ? { background: COLORS[i % COLORS.length] } : {}}>
+                    {s.name}
+                  </button>
+                ))}
+                {chartMonthlyStudents.length > 0 && (
+                  <button onClick={() => setChartMonthlyStudents([])}
+                    className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">전체</button>
                 )}
               </div>
-            </div>
-            <p className="text-xs text-gray-400 mb-2">50~100% 구간 표시 · 점선 = 반평균 · 이름 클릭으로 개인 표시/숨김</p>
-            <div className="flex gap-1 flex-wrap mb-2">
-              {students.map((s, i) => (
-                <button key={s.id}
-                  onClick={() => toggleStudent(setChartMonthlyStudents, s.id)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-                    chartMonthlyStudents.length === 0 || chartMonthlyStudents.includes(s.id)
-                      ? 'text-white border-transparent'
-                      : 'bg-gray-100 text-gray-400 border-gray-200'
-                  }`}
-                  style={chartMonthlyStudents.length === 0 || chartMonthlyStudents.includes(s.id)
-                    ? { background: COLORS[i % COLORS.length] } : {}}>
-                  {s.name}
-                </button>
-              ))}
-              {chartMonthlyStudents.length > 0 && (
-                <button onClick={() => setChartMonthlyStudents([])}
-                  className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">전체</button>
+              {monthlyOnlyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={monthlyOnlyData} margin={{ left: -10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <YAxis domain={[50, 100]} tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} />
+                    <Tooltip content={<LineChartTooltip />} />
+                    <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                    {students.filter(s => visibleMonthlyStudents.includes(s.id)).map((s, i) => (
+                      <Line key={s.id} type="monotone" dataKey={s.name} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 2 }} />
+                    ))}
+                    <Line type="monotone" dataKey="반평균" stroke="#1E293B" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-8">월간 시험 데이터가 없습니다</p>
               )}
             </div>
-            {monthlyOnlyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={monthlyOnlyData} margin={{ left: -10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                  <YAxis domain={[50, 100]} tick={{ fontSize: 11 }} tickFormatter={v => `${v}%`} />
-                  <Tooltip content={<LineChartTooltip />} />
-                  <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                  {students.filter(s => visibleMonthlyStudents.includes(s.id)).map((s, i) => (
-                    <Line key={s.id} type="monotone" dataKey={s.name} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />
-                  ))}
-                  <Line type="monotone" dataKey="반평균" stroke="#1E293B" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-sm text-gray-400 text-center py-8">월간 시험 데이터가 없습니다</p>
-            )}
           </div>
 
-          {/* ── 분야별 성취도 + 학생점수 비교 (주간/월간 분리) ── */}
+          {/* ── 분야별 성취도 + 학생점수 비교 (주간/월간 분리, 각각 2열) ── */}
           {(['weekly', 'monthly'] as const).map(examType => {
             const typeLabel = examType === 'weekly' ? '주간' : '월간';
             const fStart = examType === 'weekly' ? fieldWeeklyStart : fieldMonthlyStart;
             const fEnd   = examType === 'weekly' ? fieldWeeklyEnd   : fieldMonthlyEnd;
             const setFStart = examType === 'weekly' ? setFieldWeeklyStart : setFieldMonthlyStart;
             const setFEnd   = examType === 'weekly' ? setFieldWeeklyEnd   : setFieldMonthlyEnd;
+            const compStudents    = examType === 'weekly' ? fieldWeeklyCompStudents  : fieldMonthlyCompStudents;
+            const setCompStudents = examType === 'weekly' ? setFieldWeeklyCompStudents : setFieldMonthlyCompStudents;
+            const visibleComp     = compStudents.length > 0 ? compStudents : students.map(s => s.id);
 
             // 해당 타입·기간의 시험 (분야 있는 것만)
             const typeExams = dbTestScores.filter(t =>
@@ -3340,7 +3350,6 @@ export default function TeacherClassDetailPage() {
                   row[s.name] = 0;
                 }
               });
-              // 반 평균
               const allStudentScores = students.flatMap(s => {
                 const sExams = typeExams.filter(t => t.studentId === s.id && (t.subScores as Record<string,number>)?.[f] != null);
                 return sExams.map(t => {
@@ -3356,39 +3365,44 @@ export default function TeacherClassDetailPage() {
               ? [[1,'1달'],[3,'3달']] as [number,string][]
               : [[3,'3달'],[6,'6달']] as [number,string][];
 
+            // 공통 기간 컨트롤 UI
+            const PeriodCtrl = () => (
+              <div className="flex items-center gap-1 flex-wrap">
+                {periodBtns.map(([months, label]) => (
+                  <button key={label} onClick={() => setFieldPeriod(examType, months)}
+                    className="px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-600">{label}</button>
+                ))}
+                <span className="text-gray-300 text-xs">|</span>
+                <input type="date" className="px-1.5 py-0.5 border border-gray-200 rounded text-xs w-28"
+                  value={fStart} onChange={e => setFStart(e.target.value)} />
+                <span className="text-xs text-gray-400">~</span>
+                <input type="date" className="px-1.5 py-0.5 border border-gray-200 rounded text-xs w-28"
+                  value={fEnd} onChange={e => setFEnd(e.target.value)} />
+                {(fStart || fEnd) && (
+                  <button onClick={() => { setFStart(''); setFEnd(''); }}
+                    className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-xs">✕</button>
+                )}
+              </div>
+            );
+
             return (
-              <React.Fragment key={examType}>
+              <div key={examType} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* 분야별 성취도 (기간 평균 방사형) */}
                 <div className="card p-4">
-                  <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-                    <h3 className="font-semibold text-gray-800">{typeLabel}시험 분야별 성취도</h3>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {periodBtns.map(([months, label]) => (
-                        <button key={label} onClick={() => setFieldPeriod(examType, months)}
-                          className="px-2 py-0.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600">{label}</button>
-                      ))}
-                      <span className="text-gray-300 text-xs">|</span>
-                      <input type="date" className="px-2 py-0.5 border border-gray-200 rounded text-xs"
-                        value={fStart} onChange={e => setFStart(e.target.value)} />
-                      <span className="text-xs text-gray-400">~</span>
-                      <input type="date" className="px-2 py-0.5 border border-gray-200 rounded text-xs"
-                        value={fEnd} onChange={e => setFEnd(e.target.value)} />
-                      {(fStart || fEnd) && (
-                        <button onClick={() => { setFStart(''); setFEnd(''); }}
-                          className="px-2 py-0.5 rounded bg-gray-100 text-gray-500 text-xs">초기화</button>
-                      )}
-                    </div>
+                  <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                    <h3 className="font-semibold text-gray-800 text-sm">{typeLabel}시험 분야별 성취도</h3>
+                    <PeriodCtrl />
                   </div>
-                  <p className="text-xs text-gray-400 mb-3">기간 내 분야별 평균 점수 (100점 환산) · 마우스 오버 시 반 평균 비교</p>
+                  <p className="text-xs text-gray-400 mb-3">기간 내 분야별 평균 · 오버 시 반평균 비교</p>
                   {studentFieldAvg.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-2">
                       {studentFieldAvg.map(student => (
                         <div key={student.name}>
                           <div className="text-xs font-bold text-center mb-1" style={{ color: student.color }}>{student.name}</div>
-                          <ResponsiveContainer width="100%" height={170}>
+                          <ResponsiveContainer width="100%" height={150}>
                             <RadarChart data={student.axes}>
                               <PolarGrid stroke="#e2e8f0" />
-                              <PolarAngleAxis dataKey="axis" tick={{ fontSize: 9, fill: '#64748B' }} />
+                              <PolarAngleAxis dataKey="axis" tick={{ fontSize: 8, fill: '#64748B' }} />
                               <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
                               <Radar dataKey="value" fill={student.color} fillOpacity={0.25} stroke={student.color} strokeWidth={2} />
                               <Tooltip
@@ -3400,7 +3414,7 @@ export default function TeacherClassDetailPage() {
                                     <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', fontSize: 11 }}>
                                       <p style={{ fontWeight: 700, color: '#374151', marginBottom: 3 }}>{axis}</p>
                                       <p style={{ color: student.color }}>평균: <strong>{value}점</strong></p>
-                                      <p style={{ color: '#94A3B8' }}>반 평균: <strong>{avg}점</strong></p>
+                                      <p style={{ color: '#94A3B8' }}>반평균: <strong>{avg}점</strong></p>
                                     </div>
                                   );
                                 }}
@@ -3416,36 +3430,41 @@ export default function TeacherClassDetailPage() {
                 </div>
 
                 {/* 분야별 학생점수 비교 (기간 평균) */}
-                {fieldBarData.length > 0 && (
-                  <div className="card p-4">
-                    <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-                      <h3 className="font-semibold text-gray-800">{typeLabel}시험 분야별 학생점수 비교</h3>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {periodBtns.map(([months, label]) => (
-                          <button key={label} onClick={() => setFieldPeriod(examType, months)}
-                            className="px-2 py-0.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600">{label}</button>
-                        ))}
-                        <span className="text-gray-300 text-xs">|</span>
-                        <input type="date" className="px-2 py-0.5 border border-gray-200 rounded text-xs"
-                          value={fStart} onChange={e => setFStart(e.target.value)} />
-                        <span className="text-xs text-gray-400">~</span>
-                        <input type="date" className="px-2 py-0.5 border border-gray-200 rounded text-xs"
-                          value={fEnd} onChange={e => setFEnd(e.target.value)} />
-                        {(fStart || fEnd) && (
-                          <button onClick={() => { setFStart(''); setFEnd(''); }}
-                            className="px-2 py-0.5 rounded bg-gray-100 text-gray-500 text-xs">초기화</button>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-400 mb-3">기간 내 분야별 학생 평균 점수 (100점 환산) · 점선 = 반평균</p>
+                <div className="card p-4">
+                  <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                    <h3 className="font-semibold text-gray-800 text-sm">{typeLabel}시험 분야별 학생점수 비교</h3>
+                    <PeriodCtrl />
+                  </div>
+                  {/* 좌상단 학생 선택 필터 */}
+                  <div className="flex gap-1 flex-wrap mb-1.5">
+                    {students.map((s, i) => (
+                      <button key={s.id}
+                        onClick={() => toggleStudent(setCompStudents, s.id)}
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-all ${
+                          compStudents.length === 0 || compStudents.includes(s.id)
+                            ? 'text-white border-transparent'
+                            : 'bg-gray-100 text-gray-400 border-gray-200'
+                        }`}
+                        style={compStudents.length === 0 || compStudents.includes(s.id)
+                          ? { background: COLORS[i % COLORS.length] } : {}}>
+                        {s.name}
+                      </button>
+                    ))}
+                    {compStudents.length > 0 && (
+                      <button onClick={() => setCompStudents([])}
+                        className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">전체</button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mb-1">기간 내 분야별 평균 · 점선=반평균</p>
+                  {fieldBarData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={220}>
                       <LineChart data={fieldBarData} margin={{ left: -10 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="field" tick={{ fontSize: 11 }} />
-                        <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={v => `${v}점`} />
-                        <Tooltip formatter={(v) => `${v}점`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                        <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                        {students.map((s, i) => (
+                        <XAxis dataKey="field" tick={{ fontSize: 10 }} />
+                        <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} tickFormatter={v => `${v}점`} />
+                        <Tooltip formatter={(v) => `${v}점`} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                        <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                        {students.filter(s => visibleComp.includes(s.id)).map((s, i) => (
                           <Line key={s.id} type="monotone" dataKey={s.name}
                             stroke={COLORS[i % COLORS.length]} strokeWidth={2}
                             dot={{ r: 4 }} activeDot={{ r: 6 }} />
@@ -3453,9 +3472,11 @@ export default function TeacherClassDetailPage() {
                         <Line type="monotone" dataKey="반평균" stroke="#1E293B" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
-                  </div>
-                )}
-              </React.Fragment>
+                  ) : (
+                    <p className="text-sm text-gray-400 text-center py-6">선택 기간의 분야별 시험 데이터가 없습니다</p>
+                  )}
+                </div>
+              </div>
             );
           })}
 
