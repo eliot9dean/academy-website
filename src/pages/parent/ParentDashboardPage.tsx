@@ -555,48 +555,51 @@ export default function ParentDashboardPage() {
               <p className="text-gray-400 text-sm text-center py-6">해당 월 데일리 테스트 데이터가 없습니다</p>
             ) : (
               /* 커스텀 HTML 수직 바 — 점수 라벨 + 무지개 그라데이션(100점) */
-              <div className="relative">
-                {/* Y축 격자선 */}
-                <div className="flex flex-col-reverse" style={{ height: 180 }}>
-                  {[0, 25, 50, 75, 100].map(v => (
-                    <div key={v} className="flex items-center" style={{ flex: 1 }}>
-                      <span className="text-[10px] text-gray-400 w-6 text-right shrink-0">{v}</span>
-                      <div className="flex-1 border-t border-dashed border-gray-100 ml-1" />
-                    </div>
-                  ))}
-                </div>
-                {/* 바 차트 */}
-                <div className="absolute inset-0 flex items-end pl-7 pr-1 pb-0" style={{ top: 0, bottom: 0 }}>
-                  <div className="flex items-end gap-1 w-full h-full pb-[0px]">
-                    {dailyScoreData.map((d, i) => {
-                      const barH = (d.점수 / 100) * 168;
-                      const isRainbow = d.점수 === 100;
-                      const cssColor = getScoreCssColor(d.점수);
-                      const barBg = isRainbow
-                        ? 'linear-gradient(to top, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
-                        : cssColor;
-                      return (
-                        <div key={i} className="flex flex-col items-center justify-end flex-1 min-w-0 h-full">
-                          <div
-                            className="text-[10px] font-bold mb-0.5 leading-none"
-                            style={{ color: cssColor }}
-                          >
-                            {d.점수}점
+              <div>
+                {/* 바 + Y축 격자 (고정 높이 180px, X축 레이블과 분리) */}
+                <div className="relative" style={{ height: 180 }}>
+                  {/* Y축 격자선 */}
+                  <div className="flex flex-col-reverse h-full">
+                    {[0, 25, 50, 75, 100].map(v => (
+                      <div key={v} className="flex items-center" style={{ flex: 1 }}>
+                        <span className="text-[10px] text-gray-400 w-6 text-right shrink-0">{v}</span>
+                        <div className="flex-1 border-t border-dashed border-gray-100 ml-1" />
+                      </div>
+                    ))}
+                  </div>
+                  {/* 바 차트 (정확히 180px 이내) */}
+                  <div className="absolute inset-0 flex items-end pl-7 pr-1">
+                    <div className="flex items-end gap-1 w-full h-full">
+                      {dailyScoreData.map((d, i) => {
+                        const barH = (d.점수 / 100) * 168;
+                        const isRainbow = d.점수 === 100;
+                        const cssColor = getScoreCssColor(d.점수);
+                        const barBg = isRainbow
+                          ? 'linear-gradient(to top, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
+                          : cssColor;
+                        return (
+                          <div key={i} className="flex flex-col items-center justify-end flex-1 min-w-0 h-full">
+                            <div
+                              className="text-[10px] font-bold mb-0.5 leading-none"
+                              style={{ color: cssColor }}
+                            >
+                              {d.점수}점
+                            </div>
+                            <div
+                              className="w-full rounded-t"
+                              style={{ height: barH, background: barBg, minHeight: 4 }}
+                              title={`${d.testName}: ${d.점수}점`}
+                            />
                           </div>
-                          <div
-                            className="w-full rounded-t"
-                            style={{ height: barH, background: barBg, minHeight: 4 }}
-                            title={`${d.testName}: ${d.점수}점`}
-                          />
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-                {/* X축 날짜 레이블 */}
+                {/* X축 날짜 레이블 (바 차트 바깥, 겹침 없음) */}
                 <div className="flex pl-7 pr-1 mt-1 gap-1">
                   {dailyScoreData.map((d, i) => (
-                    <div key={i} className="flex-1 text-center text-[10px] text-gray-500">{d.date.slice(3)}</div>
+                    <div key={i} className="flex-1 text-center text-[10px] text-gray-500 font-medium">{d.date.slice(3)}일</div>
                   ))}
                 </div>
               </div>
