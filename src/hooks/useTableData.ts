@@ -73,26 +73,8 @@ function initDB(): Record<string, Row[]> {
         }
       }
       // ── days 배열 정규화: '화금' 같은 합산 문자열 → ['화','금'] ──
-      const DAY_OPTIONS = ['월','화','수','목','금','토','일'];
-      if (stored.classes) {
-        const fixedClasses = stored.classes.map((cls: Row) => {
-          const raw = cls.days;
-          const arr: string[] = Array.isArray(raw)
-            ? (raw as string[])
-            : typeof raw === 'string' && raw
-              ? raw.split(',').map((s: string) => s.trim()).filter(Boolean)
-              : [];
-          const fixed = [...new Set(arr.flatMap((d: string) =>
-            DAY_OPTIONS.includes(d) ? [d] : DAY_OPTIONS.filter(day => d.includes(day))
-          ))];
-          if (JSON.stringify(fixed) !== JSON.stringify(arr)) {
-            patched = true;
-            return { ...cls, days: fixed };
-          }
-          return cls;
-        });
-        if (patched) stored.classes = fixedClasses;
-      }
+      const { data: normalizedStored, changed: daysChanged } = normalizeDays(stored);
+      if (daysChanged) { Object.assign(stored, normalizedStored); patched = true; }
 
       _db = stored;
       if (patched) window.localStorage.setItem(DB_LS_KEY, JSON.stringify(stored));
@@ -126,6 +108,35 @@ export function getDB(): Record<string, Row[]> {
   return initDB();
 }
 
+// ─── 요일 데이터 정규화 헬퍼 ──────────────────────────────────────────────────
+const DAY_OPTIONS = ['월','화','수','목','금','토','일'];
+
+/**
+ * classes.days 배열에서 '화금' 같은 합산 문자열을 ['화','금']으로 분해.
+ * 변경이 있으면 수정된 data와 changed=true를 반환.
+ */
+function normalizeDays(data: Record<string, Row[]>): { data: Record<string, Row[]>; changed: boolean } {
+  if (!data.classes) return { data, changed: false };
+  let changed = false;
+  const fixedClasses = data.classes.map((cls: Row) => {
+    const raw = cls.days;
+    const arr: string[] = Array.isArray(raw)
+      ? (raw as string[])
+      : typeof raw === 'string' && raw
+        ? raw.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : [];
+    const fixed = [...new Set(arr.flatMap((d: string) =>
+      DAY_OPTIONS.includes(d) ? [d] : DAY_OPTIONS.filter(day => d.includes(day))
+    ))];
+    if (JSON.stringify(fixed) !== JSON.stringify(arr)) {
+      changed = true;
+      return { ...cls, days: fixed };
+    }
+    return cls;
+  });
+  return changed ? { data: { ...data, classes: fixedClasses }, changed: true } : { data, changed: false };
+}
+
 /** DB 전체를 교체하고 localStorage에 즉시 저장, 모든 구독자에 알림 */
 export function writeDB(next: Record<string, Row[]>): void {
   _db = next;
@@ -154,9 +165,11 @@ async function pollFromSupabase(): Promise<void> {
     const serverData = await supabaseGetAll();
     if (!serverData) return;
     const { _seed_version: _sv, ...serverLocal } = serverData;
-    if (JSON.stringify(getDB()) !== JSON.stringify(serverLocal)) {
-      writeDB(serverLocal);
+    const { data: normalized, changed } = normalizeDays(serverLocal);
+    if (JSON.stringify(getDB()) !== JSON.stringify(normalized)) {
+      writeDB(normalized);
     }
+    if (changed) supabaseSaveTable('classes', normalized.classes).catch(() => {});
   } catch { /* 무시 */ }
 }
 
@@ -231,7 +244,10 @@ export async function syncFromAPI(): Promise<void> {
       } else {
         // 버전 일치: 서버 데이터 사용 (_seed_version 제외)
         const { _seed_version: _, ...serverLocal } = serverData;
-        writeDB(serverLocal);
+        const { data: normalized, changed } = normalizeDays(serverLocal);
+        writeDB(normalized);
+        // 정규화가 필요했다면 Supabase에도 즉시 반영 (영구 수정)
+        if (changed) supabaseSaveTable('classes', normalized.classes).catch(() => {});
       }
       _apiSynced = true;
 
