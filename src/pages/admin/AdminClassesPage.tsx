@@ -218,9 +218,9 @@ export default function AdminClassesPage() {
                             {!isToday ? (
                               <span className="font-semibold" style={{ color: '#CBD5E1' }}>—</span>
                             ) : /* ② 수업 시작 전 */ !classStarted ? (
-                              <span className="font-semibold" style={{ color: '#94A3B8' }}>수업 전</span>
+                              <span className="font-semibold" style={{ color: '#94A3B8' }}>출석체크 전</span>
                             ) : /* ③ 수업 시작했으나 출석체크 안 함 */ !hasAttendanceRecord ? (
-                              <span className="font-semibold" style={{ color: '#F97316' }}>출석체크 전</span>
+                              <span className="font-semibold" style={{ color: '#3B82F6' }}>수업 중</span>
                             ) : /* ④ 출석 체크 완료 → 실제 현황 표시 */ (
                               <>
                                 {!hasIssue && (
