@@ -9,7 +9,14 @@ import {
 } from '../../data/mockData';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type ColType = 'bool' | 'array' | 'number' | 'select' | 'textarea' | 'date';
+type ColType = 'bool' | 'array' | 'number' | 'select' | 'multiselect' | 'time' | 'textarea' | 'date';
+
+// 10분 간격 시간 옵션 (00:00 ~ 23:50)
+const TIME_OPTIONS: string[] = Array.from({ length: 24 * 6 }, (_, i) => {
+  const h = Math.floor(i / 6);
+  const m = (i % 6) * 10;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+});
 
 interface ColDef {
   key: string;
@@ -81,12 +88,12 @@ const TABLES: TableDef[] = [
       { key: 'id', label: 'ID' },
       { key: 'name', label: '반 이름' },
       { key: 'teacherId', label: '담당 선생님', resolveFrom: { table: 'users', display: 'name' } },
-      { key: 'subject', label: '과목' },
-      { key: 'days', label: '반 요일', type: 'array' },
-      { key: 'startTime', label: '시작' },
-      { key: 'endTime', label: '종료' },
+      { key: 'subject', label: '과목', type: 'select', options: ['영어', '수학', '국어', '과학', '사회', '역사', '기타'] },
+      { key: 'days', label: '반 요일', type: 'multiselect', options: ['월', '화', '수', '목', '금', '토', '일'] },
+      { key: 'startTime', label: '시작', type: 'time' },
+      { key: 'endTime', label: '종료', type: 'time' },
       { key: 'studentIds', label: '수강 학생', resolveArrayFrom: { table: 'students', display: 'name' } },
-      { key: 'grade', label: '학년' },
+      { key: 'grade', label: '학년', type: 'select', options: ['중1', '중2', '중3', '고1', '고2', '고3'] },
     ],
     data: mockClasses,
   },
@@ -387,10 +394,50 @@ function EditCell({ value, col, onChange, tableData }: {
       <select className="form-select text-xs py-0.5 w-full"
         value={String(value ?? '')}
         onChange={e => onChange(e.target.value)}>
+        <option value="">—</option>
         {col.options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
     );
   }
+
+  // 다중 선택 (요일 등 predefined 옵션 배열)
+  if (col.type === 'multiselect' && col.options) {
+    const current = Array.isArray(value) ? (value as string[]) : [];
+    return (
+      <div className="flex flex-wrap gap-1">
+        {col.options.map(opt => {
+          const checked = current.includes(opt);
+          return (
+            <label key={opt} className="flex items-center gap-0.5 text-xs cursor-pointer select-none">
+              <input type="checkbox"
+                checked={checked}
+                onChange={e => {
+                  const next = e.target.checked
+                    ? [...current, opt]
+                    : current.filter(v => v !== opt);
+                  onChange(next);
+                }}
+                className="w-3 h-3 accent-indigo-500" />
+              <span style={{ color: '#475569' }}>{opt}</span>
+            </label>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // 10분 간격 시간 선택
+  if (col.type === 'time') {
+    return (
+      <select className="form-select text-xs py-0.5 w-24"
+        value={String(value ?? '')}
+        onChange={e => onChange(e.target.value)}>
+        <option value="">—</option>
+        {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+      </select>
+    );
+  }
+
   if (col.type === 'number') {
     return <input type="number" className="form-input text-xs py-0.5 w-20"
       value={String(value ?? '')} onChange={e => onChange(Number(e.target.value))} />;
