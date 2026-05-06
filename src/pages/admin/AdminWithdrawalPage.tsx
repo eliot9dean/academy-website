@@ -128,6 +128,17 @@ export default function AdminWithdrawalPage() {
   });
   const gradeData = Array.from(gradeMap.entries()).map(([grade, { count, students }]) => ({ grade, count, students }));
 
+  const schoolMap = new Map<string, { count: number; students: string[] }>();
+  filteredWithdrawn.forEach(s => {
+    const school = s.school || '미입력';
+    const ex = schoolMap.get(school);
+    if (ex) { ex.count++; ex.students.push(s.name); }
+    else schoolMap.set(school, { count: 1, students: [s.name] });
+  });
+  const schoolData = Array.from(schoolMap.entries())
+    .map(([school, { count, students }]) => ({ school, count, students }))
+    .sort((a, b) => b.count - a.count);
+
   const monthMap = new Map<string, { count: number; students: string[] }>();
   filteredWithdrawn.forEach(s => {
     if (s.withdrawDate) {
@@ -146,6 +157,7 @@ export default function AdminWithdrawalPage() {
   const topReason  = [...reasonData].sort((a, b) => b.value - a.value)[0];
   const topTeacher = [...teacherData].sort((a, b) => b.count - a.count)[0];
   const topGrade   = [...gradeData].sort((a, b) => b.count - a.count)[0];
+  const topSchool  = schoolData[0];
 
   return (
     <div>
@@ -188,7 +200,7 @@ export default function AdminWithdrawalPage() {
       </div>
 
       {/* 현황 요약 카드 */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <div className="card p-4" style={{ borderLeft: '4px solid #EF4444' }}>
           <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>주요 퇴원 사유</div>
           <div className="font-bold text-sm" style={{ color: '#1E293B' }}>{topReason?.name ?? '—'}</div>
@@ -205,6 +217,11 @@ export default function AdminWithdrawalPage() {
           <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>퇴원 多 학년</div>
           <div className="font-bold text-sm" style={{ color: '#1E293B' }}>{topGrade?.grade ?? '—'}</div>
           <div className="text-xs mt-0.5" style={{ color: '#8B5CF6' }}>총 {topGrade?.count ?? 0}명 퇴원</div>
+        </div>
+        <div className="card p-4" style={{ borderLeft: '4px solid #10B981' }}>
+          <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>퇴원 多 학교</div>
+          <div className="font-bold text-sm" style={{ color: '#1E293B' }}>{topSchool?.school ?? '—'}</div>
+          <div className="text-xs mt-0.5" style={{ color: '#10B981' }}>총 {topSchool?.count ?? 0}명 퇴원</div>
         </div>
       </div>
 
@@ -363,6 +380,26 @@ export default function AdminWithdrawalPage() {
             </ResponsiveContainer>
           )}
         </div>
+      </div>
+
+      {/* Charts row 3 — 학교별 */}
+      <div className="card p-4 mb-5">
+        <h3 className="text-sm font-bold mb-3" style={{ color: '#1E293B' }}>학교별 퇴원 수</h3>
+        {schoolData.length === 0 ? (
+          <div className="flex items-center justify-center h-[200px] text-sm" style={{ color: '#CBD5E1' }}>기간 내 퇴원 없음</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(200, schoolData.length * 36 + 40)}>
+            <BarChart data={schoolData} layout="vertical" margin={{ left: 8, right: 32, top: 4, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#94A3B8' }} allowDecimals={false} />
+              <YAxis type="category" dataKey="school" tick={{ fontSize: 11, fill: '#64748B' }} width={90} />
+              <Tooltip content={<StudentListTooltip labelKey="school" labelSuffix="" />} />
+              <Bar dataKey="count" fill="#10B981" radius={[0, 6, 6, 0]} name="퇴원 수">
+                <LabelList dataKey="count" position="right" style={{ fontSize: 11, fontWeight: 700, fill: '#334155' }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Withdrawal list */}
