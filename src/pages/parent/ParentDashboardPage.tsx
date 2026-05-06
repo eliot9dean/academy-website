@@ -52,8 +52,8 @@ function getScoreCssColor(score: number): string {
 
 export default function ParentDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'scores' | 'report'>('overview');
-  // 성적표 선택 상태 — {classId, periodKey:'2026-04'} | null
-  const [selReport, setSelReport] = useState<{classId:string, periodKey:string}|null>(null);
+  // 성적표 기준 월
+  const [reportMonth, setReportMonth] = useState(DEFAULT_MONTH);
 
   // ── 탭별 기간 선택 상태 ──────────────────────────────────────────────────
   const [attMonth,      setAttMonth]      = useState(DEFAULT_MONTH);
@@ -596,7 +596,7 @@ export default function ParentDashboardPage() {
                 {/* X축 날짜 레이블 */}
                 <div className="flex pl-7 pr-1 mt-1 gap-1">
                   {dailyScoreData.map((d, i) => (
-                    <div key={i} className="flex-1 text-center text-[9px] text-gray-400 truncate">{d.date}</div>
+                    <div key={i} className="flex-1 text-center text-[10px] text-gray-500">{d.date.slice(3)}</div>
                   ))}
                 </div>
               </div>
@@ -724,410 +724,359 @@ export default function ParentDashboardPage() {
           return {backgroundColor:'#FEE2E2',color:'#DC2626'};
         };
         const FIELD_COLORS = ['#6366F1','#3B82F6','#10B981','#F59E0B','#EF4444'];
-        const ATT_PIE_COLORS: Record<string,string> = { present:'#22C55E', absent:'#EF4444', late:'#EAB308', early_leave:'#F97316' };
-        const HW_PIE: {key:string,label:string,fill:string}[] = [
-          {key:'excellent',label:'우수',fill:'#6366F1'},{key:'good',label:'보통',fill:'#22C55E'},
-          {key:'poor',label:'미흡',fill:'#F97316'},{key:'not_submitted',label:'미제출',fill:'#9CA3AF'},
-        ];
 
-        // ── 리스트: 반별 × 월별 성적표 목록 ────────────────────────────────
-        type ReportMeta = { classId:string; cls:ClassInfo; periodKey:string; label:string; weeklyCount:number; monthlyScore:number|null; myAvg:number; clsAvg:number; };
-        const reportList: ReportMeta[] = [];
-        studentClasses.forEach(cls => {
-          const clsAll = testScores.filter(t => t.classId === cls.id);
-          const myAll  = allTestScores.filter(t => t.classId === cls.id);
-          // 월 키 목록 (주간/월간이 있는 달)
-          const months = [...new Set([...clsAll].map(t => t.date.slice(0,7)))].sort().reverse();
-          months.forEach(m => {
-            const myW  = myAll.filter(t => t.date.startsWith(m) && t.type==='weekly');
-            const myMo = myAll.filter(t => t.date.startsWith(m) && t.type==='monthly');
-            if(myW.length===0 && myMo.length===0) return;
-            const allW = clsAll.filter(t => t.date.startsWith(m) && (t.type==='weekly'||t.type==='monthly'));
-            const myScores = [...myW,...myMo];
-            const myAvg = myScores.length ? Math.round(myScores.reduce((a,b)=>a+b.score,0)/myScores.length) : 0;
-            const clsAvg = allW.length ? Math.round(allW.reduce((a,b)=>a+b.score,0)/allW.length) : 0;
-            const [y,mo] = m.split('-');
-            reportList.push({
-              classId:cls.id, cls, periodKey:m,
-              label:`${y}년 ${Number(mo)}월`,
-              weeklyCount: myW.length,
-              monthlyScore: myMo[0]?.score ?? null,
-              myAvg, clsAvg,
-            });
-          });
-        });
+        // ── 선택 월 기간 계산 ────────────────────────────────────────────
+        const [rptY, rptM] = reportMonth.split('-').map(Number);
+        const rptMonthStart = `${reportMonth}-01`;
+        const rptMonthEnd   = `${reportMonth}-${String(new Date(rptY, rptM, 0).getDate()).padStart(2, '0')}`;
+        const m3StartDate   = new Date(rptY, rptM - 3, 1);
+        const m3Start       = `${m3StartDate.getFullYear()}-${String(m3StartDate.getMonth() + 1).padStart(2, '0')}-01`;
 
-        // ── 선택된 성적표 상세 ───────────────────────────────────────────────
-        if(selReport) {
-          const cls = studentClasses.find(c=>c.id===selReport.classId)!;
-          const m3Start = (() => { const d=new Date(selReport.periodKey+'-01'); d.setMonth(d.getMonth()-2); return d.toISOString().slice(0,7)+'-01'; })();
-          const periodEnd = selReport.periodKey+'-31';
+        // ── 반별 성적표 카드 렌더링 ──────────────────────────────────────
 
-          const clsAllScores = testScores.filter(t=>t.classId===cls.id);
-          const myClsScores  = allTestScores.filter(t=>t.classId===cls.id);
+        return (
+          <div className="space-y-4">
+            {/* ── 헤더: 월 선택기 ── */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-700">성적표</h2>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-gray-500">📅 기준 월</span>
+                <input type="month"
+                  className="px-2.5 py-1.5 border border-gray-200 rounded-xl text-sm font-semibold"
+                  style={{ color: '#4F46E5' }}
+                  value={reportMonth}
+                  onChange={e => setReportMonth(e.target.value)} />
+              </div>
+            </div>
 
-          const clsDaily   = myClsScores.filter(t=>t.type==='daily'  &&t.date.startsWith(selReport.periodKey)).sort((a,b)=>a.date.localeCompare(b.date));
-          const clsWeekly  = myClsScores.filter(t=>t.type==='weekly' &&t.date>=m3Start&&t.date<=periodEnd).sort((a,b)=>a.date.localeCompare(b.date));
-          const clsMonthly = myClsScores.filter(t=>t.type==='monthly'&&t.date>=m3Start&&t.date<=periodEnd).sort((a,b)=>a.date.localeCompare(b.date));
+            {/* ── 반별 카드 ── */}
+            {studentClasses.length === 0 ? (
+              <div className="card p-8 text-center text-gray-400 text-sm">등록된 수업이 없습니다</div>
+            ) : (
+              <div className="flex flex-wrap gap-6 justify-center">
+              {studentClasses.map(cls => {
+                const stuColor = '#6366F1';
+                const teacher  = users.find(u => u.id === cls.teacherId);
 
-          // 반 전체 (날짜별 평균)
-          const allWeekly  = clsAllScores.filter(t=>t.type==='weekly' &&t.date>=m3Start&&t.date<=periodEnd);
-          const allMonthly = clsAllScores.filter(t=>t.type==='monthly'&&t.date>=m3Start&&t.date<=periodEnd);
-          const allDaily   = clsAllScores.filter(t=>t.type==='daily'  &&t.date.startsWith(selReport.periodKey));
+                // ── 반 전체 데이터 (평균 계산용) ──
+                const clsDailyAll = testScores.filter(t => t.classId === cls.id && t.type === 'daily'   && t.date >= rptMonthStart && t.date <= rptMonthEnd);
+                const clsWeekly   = testScores.filter(t => t.classId === cls.id && t.type === 'weekly'  && t.date >= rptMonthStart && t.date <= rptMonthEnd).sort((a,b)=>a.date.localeCompare(b.date));
+                const clsMonthly  = testScores.filter(t => t.classId === cls.id && t.type === 'monthly' && t.date >= m3Start        && t.date <= rptMonthEnd).sort((a,b)=>a.date.localeCompare(b.date));
 
-          const weeklyDates  = [...new Set(allWeekly.map(t=>t.date))].sort();
-          const monthlyDates = [...new Set(allMonthly.map(t=>t.date))].sort();
-          const dailyDates   = [...new Set(allDaily.map(t=>t.date))].sort();
+                // ── 내 데이터 ──
+                const stuDailyAll  = allTestScores.filter(t => t.classId === cls.id && t.type === 'daily'   && t.date >= rptMonthStart && t.date <= rptMonthEnd);
+                const stuWeeklyAll = allTestScores.filter(t => t.classId === cls.id && t.type === 'weekly'  && t.date >= rptMonthStart && t.date <= rptMonthEnd).sort((a,b)=>a.date.localeCompare(b.date));
+                const stuMonthlyAll= allTestScores.filter(t => t.classId === cls.id && t.type === 'monthly' && t.date >= m3Start        && t.date <= rptMonthEnd).sort((a,b)=>a.date.localeCompare(b.date));
 
-          const clsDailyAvg  = Object.fromEntries(dailyDates.map(d=>{const s=allDaily.filter(x=>x.date===d);return [d,s.length?Math.round(s.reduce((a,b)=>a+b.score,0)/s.length):0];}));
-          const clsWeeklyAvg = Object.fromEntries(weeklyDates.map(d=>{const s=allWeekly.filter(x=>x.date===d);return [d,s.length?Math.round(s.reduce((a,b)=>a+b.score,0)/s.length):0];}));
-          const clsMonthlyAvg= Object.fromEntries(monthlyDates.map(d=>{const s=allMonthly.filter(x=>x.date===d);return [d,s.length?Math.round(s.reduce((a,b)=>a+b.score,0)/s.length):0];}));
+                const dailyDates   = [...new Set(clsDailyAll.map(t=>t.date))].sort();
+                const weeklyDates  = [...new Set(clsWeekly.map(t=>t.date))].sort();
+                const monthlyDates = [...new Set(clsMonthly.map(t=>t.date))].sort().slice(-3);
 
-          const latestWithFields = [...clsWeekly,...clsMonthly].filter(t=>t.fields?.length).sort((a,b)=>b.date.localeCompare(a.date))[0];
-          const FIELDS    = latestWithFields?.fields ?? [];
-          const FIELD_MAX = latestWithFields ? Math.round((latestWithFields.maxScore??100)/(FIELDS.length||1)) : 20;
+                // ── 반 평균 맵 ──
+                const clsDailyAvgMap: Record<string,number>   = Object.fromEntries(dailyDates.map(d=>{const s=clsDailyAll.filter(x=>x.date===d);return [d,s.length?Math.round(s.reduce((a,b)=>a+b.score,0)/s.length):0];}));
+                const clsWeeklyAvgMap: Record<string,number>  = Object.fromEntries(weeklyDates.map(d=>{const s=clsWeekly.filter(x=>x.date===d);return [d,s.length?Math.round(s.reduce((a,b)=>a+b.score,0)/s.length):0];}));
+                const clsMonthlyAvgMap: Record<string,number> = Object.fromEntries(monthlyDates.map(d=>{const s=clsMonthly.filter(x=>x.date===d);return [d,s.length?Math.round(s.reduce((a,b)=>a+b.score,0)/s.length):0];}));
 
-          const latestWeekly = clsWeekly.filter(t=>t.subScores&&t.fields).slice(-1)[0];
-          const clsFieldAvgs = FIELDS.length && latestWeekly
-            ? Object.fromEntries(FIELDS.map(f=>{const s=allWeekly.filter(x=>x.date===latestWeekly.date&&x.subScores);return [f,s.length?Math.round(s.reduce((a,t)=>a+(t.subScores?.[f]??0),0)/s.length):0];}))
-            : {};
+                // ── 분야 목록 ──
+                const latestWithFields = [...stuWeeklyAll,...stuMonthlyAll].filter(t=>t.fields?.length).sort((a,b)=>b.date.localeCompare(a.date))[0];
+                const FIELDS    = latestWithFields?.fields ?? [];
+                const FIELD_MAX = latestWithFields ? Math.round((latestWithFields.maxScore??100)/(FIELDS.length||1)) : 20;
 
-          const dailyChartData   = dailyDates.map(d=>{const t=clsDaily.find(x=>x.date===d);return {name:d.slice(5),점수:t?.score??null,반평균:clsDailyAvg[d]??null};});
-          const weeklyChartData  = weeklyDates.map(d=>{const t=clsWeekly.find(x=>x.date===d);return {name:t?.testName.replace('주간테스트','').trim()??d.slice(5),점수:t?.score??null,반평균:clsWeeklyAvg[d]??null};});
-          const monthlyChartData = monthlyDates.map(d=>{const t=clsMonthly.find(x=>x.date===d);return {name:t?.testName.replace('월간평가','').trim()??d.slice(0,7),점수:t?.score??null,반평균:clsMonthlyAvg[d]??null};});
-          const radarData = FIELDS.length&&latestWeekly?.subScores
-            ? FIELDS.map(f=>({field:f,점수:latestWeekly.subScores![f]??0,반평균:clsFieldAvgs[f]??0}))
-            : [];
-          const monthlyFieldData = monthlyDates.map(d=>{
-            const t=clsMonthly.find(x=>x.date===d);
-            const row:Record<string,number|string>={name:t?.testName?.replace('월간평가','').trim()??d.slice(0,7)};
-            FIELDS.forEach(f=>{row[f]=t?.subScores?.[f]??0;});
-            return row;
-          });
+                // ── 내 데이터 날짜별 매핑 ──
+                const stuDaily   = dailyDates.map(d=>({date:d, t:stuDailyAll.find(x=>x.date===d)}));
+                const stuWeekly  = weeklyDates.map(d=>({date:d, t:stuWeeklyAll.find(x=>x.date===d)}));
+                const stuMonthly = monthlyDates.map(d=>({date:d, t:stuMonthlyAll.find(x=>x.date===d)}));
 
-          const stuAtt = allAttRecords.filter(a=>a.classId===cls.id&&a.date.startsWith(selReport.periodKey)).sort((a,b)=>a.date.localeCompare(b.date));
-          const stuHw  = homeworks.filter(h=>h.studentId===student.id&&h.classId===cls.id&&h.date.startsWith(selReport.periodKey));
-          const attCnt={present:stuAtt.filter(a=>a.status==='present').length,absent:stuAtt.filter(a=>a.status==='absent').length,late:stuAtt.filter(a=>a.status==='late').length,early_leave:stuAtt.filter(a=>a.status==='early_leave').length};
-          const hwCnt={excellent:stuHw.filter(h=>h.result==='excellent').length,good:stuHw.filter(h=>h.result==='good').length,poor:stuHw.filter(h=>h.result==='poor').length,not_submitted:stuHw.filter(h=>h.result==='not_submitted').length};
-          const attPieData=[{name:'출석',value:attCnt.present,fill:ATT_PIE_COLORS.present},{name:'결석',value:attCnt.absent,fill:ATT_PIE_COLORS.absent},{name:'지각',value:attCnt.late,fill:ATT_PIE_COLORS.late},{name:'조퇴',value:attCnt.early_leave,fill:ATT_PIE_COLORS.early_leave}].filter(d=>d.value>0);
-          const hwPieData=HW_PIE.map(p=>({name:p.label,value:hwCnt[p.key as keyof typeof hwCnt],fill:p.fill})).filter(d=>d.value>0);
+                // ── 출결·과제 ──
+                const stuAtt = allAttRecords.filter(a=>a.classId===cls.id&&a.date>=rptMonthStart&&a.date<=rptMonthEnd).sort((a,b)=>a.date.localeCompare(b.date));
+                const stuHw  = homeworks.filter(h=>h.studentId===student.id&&h.classId===cls.id&&h.date>=rptMonthStart&&h.date<=rptMonthEnd);
 
-          const attLblMap:Record<string,string>={present:'출석',absent:'결석',late:'지각',early_leave:'조퇴'};
-          const attStyle:Record<string,React.CSSProperties>={present:{backgroundColor:'#DCFCE7',color:'#15803D'},absent:{backgroundColor:'#FEE2E2',color:'#DC2626'},late:{backgroundColor:'#FEF9C3',color:'#CA8A04'},early_leave:{backgroundColor:'#FFEDD5',color:'#EA580C'}};
-          const teacher = users.find(u=>u.id===cls.teacherId);
-          const [y2,mo2]=selReport.periodKey.split('-');
+                // ── 차트 데이터 ──
+                const dailyChartData   = stuDaily.filter(x=>x.t).map(x=>({name:x.date.slice(5),점수:x.t!.score,반평균:clsDailyAvgMap[x.date]??null}));
+                const weeklyChartData  = stuWeekly.filter(x=>x.t).map(x=>({name:x.t!.testName.replace('주간테스트','').trim(),점수:x.t!.score,반평균:clsWeeklyAvgMap[x.date]??null}));
+                const monthlyChartData = stuMonthly.filter(x=>x.t).map(x=>({name:x.t!.testName.replace('월간평가','').trim(),점수:x.t!.score,반평균:clsMonthlyAvgMap[x.date]??null}));
 
-          return (
-            <div className="space-y-4">
-              {/* 뒤로가기 */}
-              <button onClick={()=>setSelReport(null)}
-                className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800">
-                ← 성적표 목록으로
-              </button>
-              {/* 성적표 카드 (390px 모바일 최적화) */}
-              <div className="flex justify-center">
-                <div className="rounded-3xl overflow-hidden shadow-xl flex flex-col"
-                  style={{width:'min(390px,100%)',border:'3px solid #6366F1',background:'#FAFBFF'}}>
-                  {/* 헤더 */}
-                  <div className="px-5 pt-5 pb-4" style={{background:'linear-gradient(135deg,#6366F1ee,#6366F199)'}}>
-                    <div className="text-white font-bold text-xl">{student.name}</div>
-                    <div className="text-white/75 text-sm">{student.grade} · {cls.name}</div>
-                    <div className="text-white/60 text-xs mt-1">{y2}년 {Number(mo2)}월 성적표 · 담당 {teacher?.name} 선생님</div>
-                  </div>
-                  <div className="overflow-y-auto" style={{maxHeight:820}}>
-                  <div className="p-4 space-y-5">
+                // ── 레이더 (최신 주간) ──
+                const clsFieldAvgFn = (date:string, fields:string[]) => {
+                  const s=clsWeekly.filter(x=>x.date===date&&x.subScores);
+                  return Object.fromEntries(fields.map(f=>[f,s.length?Math.round(s.reduce((a,t)=>a+(t.subScores?.[f]??0),0)/s.length):0]));
+                };
+                const latestWeekly  = stuWeekly.filter(x=>x.t&&x.t.subScores&&x.t.fields).slice(-1)[0]?.t;
+                const clsFieldAvgs  = FIELDS.length&&latestWeekly ? clsFieldAvgFn(latestWeekly.date,FIELDS) : {};
+                const radarData     = FIELDS.length&&latestWeekly?.subScores
+                  ? FIELDS.map(f=>({field:f,점수:latestWeekly.subScores![f]??0,반평균:clsFieldAvgs[f]??0,만점:FIELD_MAX}))
+                  : [];
 
-                    {/* ① 데일리 추이 */}
-                    {dailyChartData.some(d=>d.점수!=null) && (
-                      <div className="bg-white rounded-2xl p-4 shadow-sm">
-                        <div className="text-xs font-bold text-gray-500 mb-3">📝 데일리 테스트 추이 ({dailyChartData.length}회)</div>
-                        <ResponsiveContainer width="100%" height={130}>
-                          <LineChart data={dailyChartData} margin={{top:4,right:8,bottom:4,left:-28}}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                            <XAxis dataKey="name" tick={{fontSize:9}} />
-                            <YAxis domain={[0,100]} tick={{fontSize:9}} />
-                            <Tooltip formatter={(v:unknown)=>[`${v as number}점`]} contentStyle={{fontSize:11,borderRadius:8}} />
-                            <Legend wrapperStyle={{fontSize:9}} />
-                            <Line type="monotone" dataKey="점수" stroke="#6366F1" strokeWidth={2.5} dot={{r:3}} activeDot={{r:5}} connectNulls />
-                            <Line type="monotone" dataKey="반평균" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />
-                          </LineChart>
-                        </ResponsiveContainer>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {clsDaily.map(t=>(
-                            <div key={t.date} className="text-center">
-                              <div className="text-[9px] text-gray-400">{t.date.slice(5)}</div>
-                              <div className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={SC(t.score,t.maxScore)}>{t.score}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                // ── 월간 분야별 꺾은선 ──
+                const monthlyFieldData = monthlyDates.map(d=>{
+                  const t=stuMonthlyAll.find(x=>x.date===d);
+                  const row:Record<string,number|string>={name:t?.testName?.replace('월간평가','').trim()??d.slice(0,7)};
+                  FIELDS.forEach(f=>{row[f]=t?.subScores?.[f]??0;});
+                  return row;
+                });
 
-                    {/* ② 주간 바차트 + 분야별 */}
-                    {weeklyChartData.some(d=>d.점수!=null) && (
-                      <div className="bg-white rounded-2xl p-4 shadow-sm">
-                        <div className="text-xs font-bold text-gray-500 mb-3">📊 주간 테스트 ({weeklyChartData.length}회)</div>
-                        <ResponsiveContainer width="100%" height={100}>
-                          <BarChart data={weeklyChartData} margin={{top:4,right:8,bottom:4,left:-28}}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                            <XAxis dataKey="name" tick={{fontSize:9}} />
-                            <YAxis domain={[0,100]} tick={{fontSize:9}} />
-                            <Tooltip formatter={(v:unknown)=>[`${v as number}점`]} contentStyle={{fontSize:11,borderRadius:8}} />
-                            <Legend wrapperStyle={{fontSize:9}} />
-                            <Bar dataKey="점수" fill="#6366F1" radius={[4,4,0,0]} />
-                            <Bar dataKey="반평균" fill="#CBD5E1" radius={[4,4,0,0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                        {/* 분야별 표 */}
-                        {FIELDS.length > 0 && (
-                          <div className="mt-3 overflow-x-auto">
-                            <table className="w-full text-xs border-collapse">
-                              <thead><tr>
-                                <th className="text-left text-gray-400 font-medium pb-1 pr-2">영역</th>
-                                {clsWeekly.filter(t=>t.subScores).map(t=>(
-                                  <th key={t.date} className="text-center text-gray-400 font-medium pb-1 px-1">{t.testName.replace('주간테스트','').trim()}</th>
-                                ))}
-                              </tr></thead>
-                              <tbody>
-                                {FIELDS.map((f,fi)=>(
-                                  <tr key={f}>
-                                    <td className="pr-2 py-1 font-semibold" style={{color:FIELD_COLORS[fi%FIELD_COLORS.length]}}>{f}</td>
-                                    {clsWeekly.filter(t=>t.subScores).map(t=>{
-                                      const v=t.subScores?.[f];
-                                      return <td key={t.date} className="text-center py-1 px-1">{v!=null?<span className="font-bold px-1.5 py-0.5 rounded-md text-xs" style={SC(v,FIELD_MAX)}>{v}</span>:<span className="text-gray-300">—</span>}</td>;
-                                    })}
-                                  </tr>
-                                ))}
-                                <tr className="border-t border-gray-100">
-                                  <td className="pr-2 py-1 font-bold text-gray-600">합계</td>
-                                  {clsWeekly.filter(t=>t.subScores).map(t=>(
-                                    <td key={t.date} className="text-center py-1 px-1 font-bold" style={SC(t.score,t.maxScore)}>{t.score}</td>
-                                  ))}
-                                </tr>
-                              </tbody>
-                            </table>
+                // ── 도넛 데이터 ──
+                const attCnt={present:stuAtt.filter(a=>a.status==='present').length,absent:stuAtt.filter(a=>a.status==='absent').length,late:stuAtt.filter(a=>a.status==='late').length,early_leave:stuAtt.filter(a=>a.status==='early_leave').length};
+                const hwCnt={excellent:stuHw.filter(h=>h.result==='excellent').length,good:stuHw.filter(h=>h.result==='good').length,poor:stuHw.filter(h=>h.result==='poor').length,not_submitted:stuHw.filter(h=>h.result==='not_submitted').length};
+                const attPieData=[{name:'출석',value:attCnt.present,fill:'#22C55E'},{name:'결석',value:attCnt.absent,fill:'#EF4444'},{name:'지각',value:attCnt.late,fill:'#EAB308'},{name:'조퇴',value:attCnt.early_leave,fill:'#F97316'}].filter(d=>d.value>0);
+                const hwPieData=[{name:'우수',value:hwCnt.excellent,fill:'#6366F1'},{name:'보통',value:hwCnt.good,fill:'#22C55E'},{name:'미흡',value:hwCnt.poor,fill:'#F97316'},{name:'미제출',value:hwCnt.not_submitted,fill:'#9CA3AF'}].filter(d=>d.value>0);
+                const attStyle:Record<string,React.CSSProperties>={present:{backgroundColor:'#DCFCE7',color:'#15803D'},absent:{backgroundColor:'#FEE2E2',color:'#DC2626'},late:{backgroundColor:'#FEF9C3',color:'#CA8A04'},early_leave:{backgroundColor:'#FFEDD5',color:'#EA580C'}};
+                const attLblMap:Record<string,string>={present:'출석',absent:'결석',late:'지각',early_leave:'조퇴'};
+
+                return (
+                  <div key={cls.id}
+                    className="rounded-3xl overflow-hidden shadow-xl flex flex-col"
+                    style={{width:390,minWidth:320,maxWidth:420,border:`3px solid ${stuColor}`,background:'#FAFBFF'}}>
+
+                    {/* ── 헤더 ── */}
+                    <div className="px-5 pt-5 pb-4" style={{background:`linear-gradient(135deg,${stuColor}ee,${stuColor}99)`}}>
+                      <div className="text-white font-bold text-xl">{student.name}</div>
+                      <div className="text-white/75 text-sm">{student.grade} · {cls.name}</div>
+                      <div className="text-white/60 text-xs mt-1">{reportMonth.replace('-','년 ')}월 성적표 · 담당 {teacher?.name} 선생님</div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto" style={{maxHeight:820}}>
+                    <div className="p-4 space-y-5">
+
+                      {/* ① 데일리 테스트 추이 */}
+                      {dailyChartData.length > 0 && (
+                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                          <div className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
+                            <span>📝</span> 데일리 테스트 추이 ({dailyChartData.length}회)
                           </div>
-                        )}
-                        {/* 레이더 */}
-                        {radarData.length > 0 && (
-                          <div className="mt-3">
-                            <div className="text-[10px] text-gray-400 mb-1 text-center">최신 주간 영역별 — {latestWeekly?.testName}</div>
-                            <ResponsiveContainer width="100%" height={160}>
-                              <RadarChart data={radarData} margin={{top:8,right:24,bottom:8,left:24}}>
-                                <PolarGrid />
-                                <PolarAngleAxis dataKey="field" tick={{fontSize:10}} />
-                                <PolarRadiusAxis domain={[0,FIELD_MAX]} tick={false} axisLine={false} />
-                                <Legend wrapperStyle={{fontSize:9}} />
-                                <Radar dataKey="점수" fill="#6366F1" fillOpacity={0.3} stroke="#6366F1" strokeWidth={2} />
-                                <Radar dataKey="반평균" fill="#94A3B8" fillOpacity={0.15} stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 3" />
-                                <Tooltip formatter={(v:unknown)=>[`${v as number}점 / ${FIELD_MAX}점`]} contentStyle={{fontSize:11,borderRadius:8}} />
-                              </RadarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* ③ 월간 추이 */}
-                    {monthlyChartData.some(d=>d.점수!=null) && (
-                      <div className="bg-white rounded-2xl p-4 shadow-sm">
-                        <div className="text-xs font-bold text-gray-500 mb-3">🏆 월간 평가 — 3개월 추이</div>
-                        <ResponsiveContainer width="100%" height={120}>
-                          <LineChart data={monthlyChartData} margin={{top:4,right:8,bottom:4,left:-28}}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                            <XAxis dataKey="name" tick={{fontSize:10}} />
-                            <YAxis domain={[0,100]} tick={{fontSize:9}} />
-                            <Tooltip formatter={(v:unknown)=>[`${v as number}점`]} contentStyle={{fontSize:11,borderRadius:8}} />
-                            <Legend wrapperStyle={{fontSize:9}} />
-                            <Line type="monotone" dataKey="점수" stroke="#F59E0B" strokeWidth={3} dot={{r:5,fill:'#F59E0B',stroke:'#fff',strokeWidth:2}} activeDot={{r:7}} label={{position:'top',fontSize:11,fontWeight:'bold',fill:'#92400E'}} connectNulls />
-                            <Line type="monotone" dataKey="반평균" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />
-                          </LineChart>
-                        </ResponsiveContainer>
-                        {/* 분야별 3개월 꺾은선 */}
-                        {FIELDS.length>0 && monthlyFieldData.length>0 && (
-                          <div className="mt-3">
-                            <div className="text-[10px] text-gray-400 mb-1">영역별 점수 추이 (/{FIELD_MAX}점)</div>
-                            <ResponsiveContainer width="100%" height={120}>
-                              <LineChart data={monthlyFieldData} margin={{top:4,right:8,bottom:4,left:-28}}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                                <XAxis dataKey="name" tick={{fontSize:9}} />
-                                <YAxis domain={[0,FIELD_MAX]} tick={{fontSize:9}} />
-                                <Tooltip contentStyle={{fontSize:11,borderRadius:8}} />
-                                <Legend wrapperStyle={{fontSize:10}} />
-                                {FIELDS.map((f,fi)=>(
-                                  <Line key={f} type="monotone" dataKey={f} stroke={FIELD_COLORS[fi%FIELD_COLORS.length]} strokeWidth={2} dot={{r:3}} connectNulls />
-                                ))}
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
-                        )}
-                        {/* 월간 분야별 표 */}
-                        {FIELDS.length>0 && (
-                          <div className="mt-3 overflow-x-auto">
-                            <table className="w-full text-xs border-collapse">
-                              <thead><tr>
-                                <th className="text-left text-gray-400 font-medium pb-1 pr-2">영역</th>
-                                {clsMonthly.map(t=>(
-                                  <th key={t.date} className="text-center text-gray-400 font-medium pb-1 px-1">{t.testName.replace('월간평가','').trim()}</th>
-                                ))}
-                              </tr></thead>
-                              <tbody>
-                                {FIELDS.map((f,fi)=>(
-                                  <tr key={f}>
-                                    <td className="pr-2 py-1 font-semibold" style={{color:FIELD_COLORS[fi%FIELD_COLORS.length]}}>{f}</td>
-                                    {clsMonthly.map((t,mi)=>{
-                                      const v=t.subScores?.[f];
-                                      const prev=mi>0?clsMonthly[mi-1].subScores?.[f]:null;
-                                      const arrow=(prev!=null&&v!=null)?(v>prev?'↑':v<prev?'↓':''):'';
-                                      return (
-                                        <td key={t.date} className="text-center py-1 px-1">
-                                          {v!=null?<span className="font-bold">{v}<span className="text-[9px] ml-0.5" style={{color:arrow==='↑'?'#16A34A':arrow==='↓'?'#DC2626':'#94A3B8'}}>{arrow}</span></span>:<span className="text-gray-300">—</span>}
-                                        </td>
-                                      );
-                                    })}
-                                  </tr>
-                                ))}
-                                <tr className="border-t border-gray-100">
-                                  <td className="pr-2 py-1 font-bold text-gray-600">합계</td>
-                                  {clsMonthly.map((t,mi)=>{
-                                    const prev=mi>0?clsMonthly[mi-1].score:null;
-                                    const diff=prev!=null?t.score-prev:null;
-                                    return (
-                                      <td key={t.date} className="text-center py-1 px-1">
-                                        <span className="font-bold px-1.5 py-0.5 rounded-md" style={SC(t.score,t.maxScore)}>{t.score}</span>
-                                        {diff!=null&&<div className="text-[9px]" style={{color:diff>0?'#16A34A':diff<0?'#DC2626':'#94A3B8'}}>{diff>0?`+${diff}`:diff}</div>}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* ④ 출석 & 과제 도넛 */}
-                    <div className="bg-white rounded-2xl p-4 shadow-sm">
-                      <div className="text-xs font-bold text-gray-500 mb-2">📋 출석 & 과제 현황</div>
-                      <div className="flex gap-2">
-                        {/* 출석 */}
-                        <div className="flex-1 text-center">
-                          <div className="text-[10px] text-gray-400 mb-1">✅ 출석 ({stuAtt.length}회)</div>
-                          {attPieData.length>0?(
-                            <ResponsiveContainer width="100%" height={110}>
-                              <PieChart>
-                                <Pie data={attPieData} dataKey="value" cx="50%" cy="50%" innerRadius={25} outerRadius={46} paddingAngle={3}>
-                                  {attPieData.map((e,i)=><Cell key={i} fill={e.fill}/>)}
-                                </Pie>
-                                <Tooltip formatter={(v:unknown,n:unknown)=>[`${v as number}회`,String(n)]} contentStyle={{fontSize:10,borderRadius:8}} />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          ):<div className="h-[110px] flex items-center justify-center text-xs text-gray-300">기록 없음</div>}
-                          <div className="flex flex-wrap justify-center gap-1 mt-1">
-                            {attPieData.map(d=>(
-                              <div key={d.name} className="flex items-center gap-0.5 text-[9px]">
-                                <div className="w-2 h-2 rounded-full" style={{background:d.fill}}/>
-                                <span>{d.name} {d.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex flex-wrap gap-1 mt-2 justify-center">
-                            {stuAtt.map(a=>(
-                              <div key={a.date} className="flex flex-col items-center">
-                                <div className="text-[8px] text-gray-400">{a.date.slice(5)}</div>
-                                <div className="w-5 h-5 rounded text-[8px] font-bold flex items-center justify-center" style={attStyle[a.status]}>
-                                  {a.status==='present'?'✓':a.status==='absent'?'✗':attLblMap[a.status][0]}
+                          <ResponsiveContainer width="100%" height={140}>
+                            <LineChart data={dailyChartData} margin={{top:4,right:8,bottom:4,left:-28}}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                              <XAxis dataKey="name" tick={{fontSize:9}} />
+                              <YAxis domain={[0,100]} tick={{fontSize:9}} />
+                              <Tooltip formatter={(v:unknown)=>[`${v as number}점`]} contentStyle={{fontSize:11,borderRadius:8}} />
+                              <Legend wrapperStyle={{fontSize:9}} />
+                              <Line type="monotone" dataKey="점수" stroke={stuColor} strokeWidth={2.5} dot={{r:3,fill:stuColor}} activeDot={{r:5}} />
+                              <Line type="monotone" dataKey="반평균" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {stuDaily.map(({date,t})=>(
+                              <div key={date} className="text-center">
+                                <div className="text-[9px] text-gray-400">{date.slice(5)}</div>
+                                <div className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={t?SC(t.score,t.maxScore):{backgroundColor:'#F3F4F6',color:'#9CA3AF'}}>
+                                  {t?t.score:'—'}
                                 </div>
                               </div>
                             ))}
                           </div>
                         </div>
-                        {/* 과제 */}
-                        <div className="flex-1 text-center">
-                          <div className="text-[10px] text-gray-400 mb-1">📋 과제 ({stuHw.length}회)</div>
-                          {hwPieData.length>0?(
-                            <ResponsiveContainer width="100%" height={110}>
-                              <PieChart>
-                                <Pie data={hwPieData} dataKey="value" cx="50%" cy="50%" innerRadius={25} outerRadius={46} paddingAngle={3}>
-                                  {hwPieData.map((e,i)=><Cell key={i} fill={e.fill}/>)}
-                                </Pie>
-                                <Tooltip formatter={(v:unknown,n:unknown)=>[`${v as number}회`,String(n)]} contentStyle={{fontSize:10,borderRadius:8}} />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          ):<div className="h-[110px] flex items-center justify-center text-xs text-gray-300">기록 없음</div>}
-                          <div className="flex flex-wrap justify-center gap-1 mt-1">
-                            {hwPieData.map(d=>(
-                              <div key={d.name} className="flex items-center gap-0.5 text-[9px]">
-                                <div className="w-2 h-2 rounded-full" style={{background:d.fill}}/>
-                                <span>{d.name} {d.value}</span>
-                              </div>
-                            ))}
+                      )}
+
+                      {/* ② 주간 테스트 — 바 차트 + 분야별 */}
+                      {stuWeekly.filter(x=>x.t).length > 0 && (
+                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                          <div className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
+                            <span>📊</span> 주간 테스트 ({stuWeekly.filter(x=>x.t).length}회)
+                          </div>
+                          <ResponsiveContainer width="100%" height={100}>
+                            <BarChart data={weeklyChartData} margin={{top:4,right:8,bottom:4,left:-28}}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                              <XAxis dataKey="name" tick={{fontSize:9}} />
+                              <YAxis domain={[0,100]} tick={{fontSize:9}} />
+                              <Tooltip formatter={(v:unknown)=>[`${v as number}점`]} contentStyle={{fontSize:11,borderRadius:8}} />
+                              <Legend wrapperStyle={{fontSize:9}} />
+                              <Bar dataKey="점수" fill={stuColor} radius={[4,4,0,0]} />
+                              <Bar dataKey="반평균" fill="#CBD5E1" radius={[4,4,0,0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                          {FIELDS.length > 0 && (
+                            <div className="mt-3 overflow-x-auto">
+                              <table className="w-full text-xs border-collapse">
+                                <thead><tr>
+                                  <th className="text-left text-gray-400 font-medium pb-1 pr-2">영역</th>
+                                  {stuWeekly.filter(x=>x.t).map(({t})=>(
+                                    <th key={t!.date} className="text-center text-gray-400 font-medium pb-1 px-1">{t!.testName.replace('주간테스트','').trim()}</th>
+                                  ))}
+                                </tr></thead>
+                                <tbody>
+                                  {FIELDS.map((f,fi)=>(
+                                    <tr key={f}>
+                                      <td className="pr-2 py-1 font-semibold" style={{color:FIELD_COLORS[fi%FIELD_COLORS.length]}}>{f}</td>
+                                      {stuWeekly.filter(x=>x.t).map(({t})=>{
+                                        const v=t!.subScores?.[f];
+                                        return <td key={t!.date} className="text-center py-1 px-1">{v!=null?<span className="font-bold px-1.5 py-0.5 rounded-md text-xs" style={SC(v,FIELD_MAX)}>{v}</span>:<span className="text-gray-300">—</span>}</td>;
+                                      })}
+                                    </tr>
+                                  ))}
+                                  <tr className="border-t border-gray-100">
+                                    <td className="pr-2 py-1 font-bold text-gray-600">합계</td>
+                                    {stuWeekly.filter(x=>x.t).map(({t})=>(
+                                      <td key={t!.date} className="text-center py-1 px-1 font-bold" style={SC(t!.score,t!.maxScore)}>{t!.score}</td>
+                                    ))}
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                          {radarData.length > 0 && (
+                            <div className="mt-3">
+                              <div className="text-[10px] text-gray-400 mb-1 text-center">최신 주간 영역별 레이더 — {latestWeekly?.testName}</div>
+                              <ResponsiveContainer width="100%" height={160}>
+                                <RadarChart data={radarData} margin={{top:8,right:24,bottom:8,left:24}}>
+                                  <PolarGrid />
+                                  <PolarAngleAxis dataKey="field" tick={{fontSize:10}} />
+                                  <PolarRadiusAxis domain={[0,FIELD_MAX]} tick={false} axisLine={false} />
+                                  <Legend wrapperStyle={{fontSize:9}} />
+                                  <Radar dataKey="점수" fill={stuColor} fillOpacity={0.3} stroke={stuColor} strokeWidth={2} />
+                                  <Radar dataKey="반평균" fill="#94A3B8" fillOpacity={0.15} stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 3" />
+                                  <Tooltip formatter={(v:unknown)=>[`${v as number}점 / ${FIELD_MAX}점`]} contentStyle={{fontSize:11,borderRadius:8}} />
+                                </RadarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ③ 월간 평가 — 추이 + 분야별 꺾은선 */}
+                      {stuMonthly.filter(x=>x.t).length > 0 && (
+                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                          <div className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
+                            <span>🏆</span> 월간 평가 — 3개월 추이
+                          </div>
+                          <ResponsiveContainer width="100%" height={140}>
+                            <LineChart data={monthlyChartData} margin={{top:24,right:8,bottom:4,left:-28}}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                              <XAxis dataKey="name" tick={{fontSize:10}} />
+                              <YAxis domain={[0,100]} tick={{fontSize:9}} />
+                              <Tooltip formatter={(v:unknown)=>[`${v as number}점`]} contentStyle={{fontSize:11,borderRadius:8}} />
+                              <Legend wrapperStyle={{fontSize:9}} />
+                              <Line type="monotone" dataKey="점수" stroke="#F59E0B" strokeWidth={3} dot={{r:5,fill:'#F59E0B',stroke:'#fff',strokeWidth:2}} activeDot={{r:7}} label={{position:'top',fontSize:11,fontWeight:'bold',fill:'#92400E'}} />
+                              <Line type="monotone" dataKey="반평균" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                          {FIELDS.length>0&&monthlyFieldData.length>0&&(
+                            <div className="mt-3">
+                              <div className="text-[10px] text-gray-400 mb-1">영역별 점수 추이 (/{FIELD_MAX}점)</div>
+                              <ResponsiveContainer width="100%" height={120}>
+                                <LineChart data={monthlyFieldData} margin={{top:4,right:8,bottom:4,left:-28}}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                                  <XAxis dataKey="name" tick={{fontSize:9}} />
+                                  <YAxis domain={[0,FIELD_MAX]} tick={{fontSize:9}} />
+                                  <Tooltip contentStyle={{fontSize:11,borderRadius:8}} />
+                                  <Legend wrapperStyle={{fontSize:10}} />
+                                  {FIELDS.map((f,fi)=>(
+                                    <Line key={f} type="monotone" dataKey={f} stroke={FIELD_COLORS[fi%FIELD_COLORS.length]} strokeWidth={2} dot={{r:3}} />
+                                  ))}
+                                </LineChart>
+                              </ResponsiveContainer>
+                            </div>
+                          )}
+                          {FIELDS.length>0&&(
+                            <div className="mt-3 overflow-x-auto">
+                              <table className="w-full text-xs border-collapse">
+                                <thead><tr>
+                                  <th className="text-left text-gray-400 font-medium pb-1 pr-2">영역</th>
+                                  {stuMonthly.filter(x=>x.t).map(({t})=>(
+                                    <th key={t!.date} className="text-center text-gray-400 font-medium pb-1 px-1">{t!.testName.replace('월간평가','').trim()}</th>
+                                  ))}
+                                </tr></thead>
+                                <tbody>
+                                  {FIELDS.map((f,fi)=>(
+                                    <tr key={f}>
+                                      <td className="pr-2 py-1 font-semibold" style={{color:FIELD_COLORS[fi%FIELD_COLORS.length]}}>{f}</td>
+                                      {stuMonthly.filter(x=>x.t).map(({t},mi)=>{
+                                        const v=t!.subScores?.[f];
+                                        const prev=mi>0?stuMonthly.filter(x=>x.t)[mi-1].t?.subScores?.[f]:null;
+                                        const arrow=(prev!=null&&v!=null)?(v>prev?'↑':v<prev?'↓':''):'';
+                                        const arrowColor=arrow==='↑'?'#16A34A':arrow==='↓'?'#DC2626':'#94A3B8';
+                                        return (
+                                          <td key={t!.date} className="text-center py-1 px-1">
+                                            {v!=null?<span className="font-bold">{v}<span className="text-[9px] ml-0.5" style={{color:arrowColor}}>{arrow}</span></span>:<span className="text-gray-300">—</span>}
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                                  <tr className="border-t border-gray-100">
+                                    <td className="pr-2 py-1 font-bold text-gray-600">합계</td>
+                                    {stuMonthly.filter(x=>x.t).map(({t},mi)=>{
+                                      const prev=mi>0?stuMonthly.filter(x=>x.t)[mi-1].t?.score:null;
+                                      const diff=prev!=null?t!.score-prev:null;
+                                      return (
+                                        <td key={t!.date} className="text-center py-1 px-1">
+                                          <span className="font-bold px-1.5 py-0.5 rounded-md" style={SC(t!.score,t!.maxScore)}>{t!.score}</span>
+                                          {diff!=null&&<div className="text-[9px]" style={{color:diff>0?'#16A34A':diff<0?'#DC2626':'#94A3B8'}}>{diff>0?`+${diff}`:diff}</div>}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ④ 출석 & 과제 도넛 */}
+                      <div className="bg-white rounded-2xl p-4 shadow-sm">
+                        <div className="text-xs font-bold text-gray-500 mb-2">📋 출석 & 과제 현황</div>
+                        <div className="flex gap-2">
+                          <div className="flex-1 text-center">
+                            <div className="text-[10px] text-gray-400 mb-1">✅ 출석 ({stuAtt.length}회)</div>
+                            {attPieData.length>0?(
+                              <ResponsiveContainer width="100%" height={110}>
+                                <PieChart>
+                                  <Pie data={attPieData} dataKey="value" cx="50%" cy="50%" innerRadius={25} outerRadius={46} paddingAngle={3}>
+                                    {attPieData.map((e,i)=><Cell key={i} fill={e.fill}/>)}
+                                  </Pie>
+                                  <Tooltip formatter={(v:unknown,n:unknown)=>[`${v as number}회`,String(n)]} contentStyle={{fontSize:10,borderRadius:8}} />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            ):<div className="h-[110px] flex items-center justify-center text-xs text-gray-300">기록 없음</div>}
+                            <div className="flex flex-wrap justify-center gap-1 mt-1">
+                              {attPieData.map(d=>(
+                                <div key={d.name} className="flex items-center gap-0.5 text-[9px]">
+                                  <div className="w-2 h-2 rounded-full" style={{background:d.fill}}/>
+                                  <span>{d.name} {d.value}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-2 justify-center">
+                              {stuAtt.map(a=>(
+                                <div key={a.date} className="flex flex-col items-center">
+                                  <div className="text-[8px] text-gray-400">{a.date.slice(5)}</div>
+                                  <div className="w-5 h-5 rounded text-[8px] font-bold flex items-center justify-center" style={attStyle[a.status]}>
+                                    {a.status==='present'?'✓':a.status==='absent'?'✗':attLblMap[a.status][0]}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex-1 text-center">
+                            <div className="text-[10px] text-gray-400 mb-1">📋 과제 ({stuHw.length}회)</div>
+                            {hwPieData.length>0?(
+                              <ResponsiveContainer width="100%" height={110}>
+                                <PieChart>
+                                  <Pie data={hwPieData} dataKey="value" cx="50%" cy="50%" innerRadius={25} outerRadius={46} paddingAngle={3}>
+                                    {hwPieData.map((e,i)=><Cell key={i} fill={e.fill}/>)}
+                                  </Pie>
+                                  <Tooltip formatter={(v:unknown,n:unknown)=>[`${v as number}회`,String(n)]} contentStyle={{fontSize:10,borderRadius:8}} />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            ):<div className="h-[110px] flex items-center justify-center text-xs text-gray-300">기록 없음</div>}
+                            <div className="flex flex-wrap justify-center gap-1 mt-1">
+                              {hwPieData.map(d=>(
+                                <div key={d.name} className="flex items-center gap-0.5 text-[9px]">
+                                  <div className="w-2 h-2 rounded-full" style={{background:d.fill}}/>
+                                  <span>{d.name} {d.value}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
+
                     </div>
-
+                    </div>
                   </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        // ── 성적표 목록 ─────────────────────────────────────────────────────
-        return (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-700">성적표 목록</h2>
-              <span className="text-xs text-gray-400">최근 발행 순</span>
-            </div>
-            {reportList.length === 0 ? (
-              <div className="card p-8 text-center text-gray-400 text-sm">성적표 데이터가 없습니다</div>
-            ) : (
-              <div className="space-y-3">
-                {reportList.map((r, i) => {
-                  const isLatest = i === 0;
-                  return (
-                    <button
-                      key={`${r.classId}-${r.periodKey}`}
-                      onClick={()=>setSelReport({classId:r.classId, periodKey:r.periodKey})}
-                      className="w-full text-left card p-4 hover:shadow-md transition-shadow"
-                      style={isLatest ? {borderLeft:'4px solid #6366F1'} : {borderLeft:'4px solid #E2E8F0'}}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            {isLatest && <span className="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-semibold">최신</span>}
-                            <span className="font-bold text-gray-800 text-sm">{r.label} 성적표</span>
-                          </div>
-                          <div className="text-xs text-gray-500 mb-2">{r.cls.name}</div>
-                          <div className="flex gap-3 text-xs">
-                            <span className="text-gray-500">주간 <strong>{r.weeklyCount}회</strong></span>
-                            {r.monthlyScore != null && (
-                              <span className="text-gray-500">월간 <strong style={{color: r.monthlyScore>=90?'#16A34A':r.monthlyScore>=75?'#2563EB':'#D97706'}}>{r.monthlyScore}점</strong></span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0 ml-4">
-                          <div className="text-lg font-bold" style={{color:r.myAvg>=90?'#16A34A':r.myAvg>=75?'#2563EB':'#D97706'}}>{r.myAvg}점</div>
-                          <div className="text-[10px] text-gray-400">내 평균</div>
-                          <div className="text-[10px] mt-0.5" style={{color: r.myAvg>r.clsAvg?'#16A34A':r.myAvg<r.clsAvg?'#DC2626':'#94A3B8'}}>
-                            반평균 대비 {r.myAvg>r.clsAvg?'+':''}{r.myAvg-r.clsAvg}점
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full" style={{width:`${r.myAvg}%`,background:r.myAvg>=90?'#16A34A':r.myAvg>=75?'#3B82F6':'#F59E0B'}} />
-                        </div>
-                        <span className="text-[10px] text-gray-400 shrink-0">{r.myAvg}점 / 100점</span>
-                      </div>
-                      <div className="mt-1 text-right text-[10px] text-indigo-500 font-medium">상세보기 →</div>
-                    </button>
-                  );
-                })}
+                );
+              })}
               </div>
             )}
           </div>
