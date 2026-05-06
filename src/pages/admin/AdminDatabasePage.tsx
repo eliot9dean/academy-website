@@ -9,7 +9,7 @@ import {
 } from '../../data/mockData';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type ColType = 'bool' | 'array' | 'number' | 'select' | 'multiselect' | 'time' | 'textarea' | 'date';
+type ColType = 'bool' | 'array' | 'number' | 'select' | 'multiselect' | 'time' | 'month' | 'textarea' | 'date';
 
 // 10분 간격 시간 옵션 (00:00 ~ 23:50)
 const TIME_OPTIONS: string[] = Array.from({ length: 24 * 6 }, (_, i) => {
@@ -17,6 +17,9 @@ const TIME_OPTIONS: string[] = Array.from({ length: 24 * 6 }, (_, i) => {
   const m = (i % 6) * 10;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 });
+
+// 학년 옵션 (초1~초6, 중1~중3, 고1~고3)
+const GRADE_OPTIONS = ['초1','초2','초3','초4','초5','초6','중1','중2','중3','고1','고2','고3'];
 
 interface ColDef {
   key: string;
@@ -27,6 +30,8 @@ interface ColDef {
   resolveFrom?: { table: string; display: string };
   /** array 타입인데 다른 테이블에서 이름 배열 */
   resolveArrayFrom?: { table: string; display: string };
+  /** 편집 시 표시할 안내 메시지 */
+  info?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,7 +59,7 @@ const TABLES: TableDef[] = [
       { key: 'name',    label: '이름' },
       { key: 'role',    label: '역할', type: 'select', options: ['admin','teacher','staff','parent'] },
       { key: 'phone',   label: '연락처' },
-      { key: 'email',   label: '이메일' },
+      { key: 'email',   label: '이메일', info: '앱 표시용 이메일입니다. 실제 로그인 이메일(Supabase Auth)은 별도 관리되므로 여기서 변경해도 로그인에는 영향 없습니다.' },
       { key: 'ssn',        label: '주민등록번호' },
       { key: 'address',    label: '주소' },
       { key: 'joinDate',   label: '입사일', type: 'date' },
@@ -67,18 +72,18 @@ const TABLES: TableDef[] = [
     columns: [
       { key: 'id', label: 'ID' },
       { key: 'name', label: '이름' },
-      { key: 'grade', label: '학년', type: 'select', options: ['중1','중2','중3','고1','고2','고3'] },
+      { key: 'grade', label: '학년', type: 'select', options: GRADE_OPTIONS },
       { key: 'school', label: '학교' },
       { key: 'parentName', label: '학부모명' },
       { key: 'studentPhone', label: '학생연락처' },
       { key: 'parentPhone', label: '학부모연락처' },
-      { key: 'enrollDate', label: '등록일' },
+      { key: 'enrollDate', label: '등록일', type: 'date' },
       { key: 'status', label: '상태', type: 'select', options: ['enrolled','withdrawn'] },
-      { key: 'withdrawDate', label: '퇴원일' },
+      { key: 'withdrawDate', label: '퇴원일', type: 'date' },
       { key: 'withdrawReason', label: '퇴원사유' },
       { key: 'classIds', label: '수강반', resolveArrayFrom: { table: 'classes', display: 'name' } },
       { key: 'tuitionPaid', label: '납부', type: 'bool' },
-      { key: 'tuitionDueDate', label: '납부기한' },
+      { key: 'tuitionDueDate', label: '납부기한', type: 'date' },
     ],
     data: mockStudents,
   },
@@ -93,7 +98,7 @@ const TABLES: TableDef[] = [
       { key: 'startTime', label: '시작', type: 'time' },
       { key: 'endTime', label: '종료', type: 'time' },
       { key: 'studentIds', label: '수강 학생', resolveArrayFrom: { table: 'students', display: 'name' } },
-      { key: 'grade', label: '학년', type: 'select', options: ['중1', '중2', '중3', '고1', '고2', '고3'] },
+      { key: 'grade', label: '학년', type: 'select', options: GRADE_OPTIONS },
     ],
     data: mockClasses,
   },
@@ -101,7 +106,7 @@ const TABLES: TableDef[] = [
     id: 'attendance', label: '출석(Attendance)', icon: '✅', color: '#16A34A',
     columns: [
       { key: 'studentId', label: '학생', resolveFrom: { table: 'students', display: 'name' } },
-      { key: 'date', label: '날짜' },
+      { key: 'date', label: '날짜', type: 'date' },
       { key: 'status', label: '상태', type: 'select', options: ['present','absent','late','early_leave'] },
       { key: 'note', label: '메모' },
     ],
@@ -111,7 +116,7 @@ const TABLES: TableDef[] = [
     id: 'dailyProgress', label: '반 일지(DailyProgress)', icon: '📝', color: '#0D9488',
     columns: [
       { key: 'classId', label: '반', resolveFrom: { table: 'classes', display: 'name' } },
-      { key: 'date', label: '날짜' },
+      { key: 'date', label: '날짜', type: 'date' },
       { key: 'content', label: '반 내용', type: 'textarea' },
       { key: 'homework', label: '과제', type: 'textarea' },
       { key: 'teacherNote', label: '선생님 메모', type: 'textarea' },
@@ -124,7 +129,7 @@ const TABLES: TableDef[] = [
     columns: [
       { key: 'studentId', label: '학생', resolveFrom: { table: 'students', display: 'name' } },
       { key: 'classId', label: '반', resolveFrom: { table: 'classes', display: 'name' } },
-      { key: 'date', label: '날짜' },
+      { key: 'date', label: '날짜', type: 'date' },
       { key: 'result', label: '결과', type: 'select', options: ['excellent','good','poor','not_submitted'] },
     ],
     data: mockHomeworkResults,
@@ -134,7 +139,7 @@ const TABLES: TableDef[] = [
     columns: [
       { key: 'studentId', label: '학생', resolveFrom: { table: 'students', display: 'name' } },
       { key: 'classId', label: '반', resolveFrom: { table: 'classes', display: 'name' } },
-      { key: 'date', label: '날짜' },
+      { key: 'date', label: '날짜', type: 'date' },
       { key: 'type', label: '유형', type: 'select', options: ['daily','weekly','monthly'] },
       { key: 'testName', label: '시험명' },
       { key: 'score', label: '점수', type: 'number' },
@@ -164,9 +169,9 @@ const TABLES: TableDef[] = [
     columns: [
       { key: 'id', label: 'ID' },
       { key: 'title', label: '제목' },
-      { key: 'date', label: '날짜' },
-      { key: 'startTime', label: '시작' },
-      { key: 'endTime', label: '종료' },
+      { key: 'date', label: '날짜', type: 'date' },
+      { key: 'startTime', label: '시작', type: 'time' },
+      { key: 'endTime', label: '종료', type: 'time' },
       { key: 'type', label: '종류', type: 'select', options: ['consultation','meeting','event','external'] },
       { key: 'personName', label: '상담자' },
       { key: 'personType', label: '구분', type: 'select', options: ['학부모','강사','외부업체','기타'] },
@@ -183,7 +188,7 @@ const TABLES: TableDef[] = [
       { key: 'studentName', label: '학생명' },
       { key: 'parentName', label: '학부모' },
       { key: 'phone', label: '연락처' },
-      { key: 'date', label: '날짜' },
+      { key: 'date', label: '날짜', type: 'date' },
       { key: 'result', label: '결과', type: 'select', options: ['registered','pending','declined'] },
       { key: 'source', label: '유입경로', type: 'select', options: ['지인 추천','인터넷 검색','인스타그램','현수막','기타'] },
       { key: 'contactForEvents', label: '연락동의', type: 'bool' },
@@ -199,7 +204,7 @@ const TABLES: TableDef[] = [
       { key: 'type', label: '유형', type: 'select', options: ['income','fixed_expense','variable_expense'] },
       { key: 'category', label: '카테고리' },
       { key: 'amount', label: '금액', type: 'number' },
-      { key: 'date', label: '날짜' },
+      { key: 'date', label: '날짜', type: 'date' },
       { key: 'description', label: '설명' },
     ],
     data: mockFinancials,
@@ -208,7 +213,7 @@ const TABLES: TableDef[] = [
     id: 'dailyReports', label: '데일리리포트(DailyReports)', icon: '📨', color: '#0369A1',
     columns: [
       { key: 'classId', label: '반', resolveFrom: { table: 'classes', display: 'name' } },
-      { key: 'date', label: '날짜' },
+      { key: 'date', label: '날짜', type: 'date' },
       { key: 'studentId', label: '학생', resolveFrom: { table: 'students', display: 'name' } },
       { key: 'sent', label: '발송', type: 'bool' },
       { key: 'sentAt', label: '발송시간' },
@@ -239,7 +244,7 @@ const TABLES: TableDef[] = [
       { key: 'classId',         label: '반',   resolveFrom: { table: 'classes',  display: 'name' } },
       { key: 'enrollStartDate', label: '수강 시작일', type: 'date' },
       { key: 'enrollEndDate',   label: '수강 종료일', type: 'date' },
-      { key: 'paymentMonth',    label: '납부 월' },
+      { key: 'paymentMonth',    label: '납부 월', type: 'month' },
       { key: 'tuitionFee',      label: '수강료', type: 'number' },
       { key: 'tuitionDueDate',  label: '납부 기한', type: 'date' },
       { key: 'tuitionPaid',     label: '수강료 납부', type: 'bool' },
@@ -450,13 +455,29 @@ function EditCell({ value, col, onChange, tableData }: {
     return <input type="date" className="form-input text-xs py-0.5 w-32"
       value={String(value ?? '')} onChange={e => onChange(e.target.value)} />;
   }
+  if (col.type === 'month') {
+    return <input type="month" className="form-input text-xs py-0.5 w-28"
+      value={String(value ?? '')} onChange={e => onChange(e.target.value)} />;
+  }
   if (col.type === 'array') {
     const arr = Array.isArray(value) ? (value as string[]).join(', ') : String(value ?? '');
     return <input className="form-input text-xs py-0.5 w-32"
       value={arr} onChange={e => onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />;
   }
-  return <input className="form-input text-xs py-0.5 w-28"
-    value={String(value ?? '')} onChange={e => onChange(e.target.value)} />;
+  // 기본 텍스트 입력 (+ info 안내 메시지)
+  const inputNode = (
+    <input className="form-input text-xs py-0.5 w-28"
+      value={String(value ?? '')} onChange={e => onChange(e.target.value)} />
+  );
+  if (col.info) {
+    return (
+      <div className="flex flex-col gap-0.5">
+        {inputNode}
+        <p className="text-[10px] leading-tight" style={{ color: '#B45309' }}>ℹ️ {col.info}</p>
+      </div>
+    );
+  }
+  return inputNode;
 }
 
 // ── Trash icon ────────────────────────────────────────────────────────────────
