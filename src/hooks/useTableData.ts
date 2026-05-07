@@ -17,7 +17,7 @@ type Row = Record<string, any>;
 export const DB_LS_KEY      = 'ams_db_tables_v6';
 export const API_TOKEN_KEY  = 'ams_api_token';
 // 더미 데이터가 바뀔 때마다 올려주면 Supabase 강제 재업로드됨
-const SEED_VERSION = 8;
+const SEED_VERSION = 9;
 
 export const DB_INIT: Record<string, Row[]> = {
   users:          mockUsers.map(r => ({ ...r })),
@@ -48,6 +48,7 @@ let _apiSynced = false;   // 이 세션에서 API 동기화가 완료됐는지 �
 let _realtimeUnsubscribe: (() => void) | null = null; // Supabase Realtime 구독 해제 함수
 let _pollingInterval: ReturnType<typeof setInterval> | null = null; // 폴링 인터벌
 let _lastUserWrite = 0; // 사용자가 마지막으로 데이터를 저장한 타임스탬프
+let _isSyncing = false;  // 초기 시드 업로드 중 폴링·Realtime 덮어쓰기 방지
 
 // ─── 테스트 모드 ────────────────────────────────────────────────────────────
 /** true이면 모든 쓰기(localStorage + Supabase)를 차단, 메모리에만 반영 */
@@ -180,6 +181,7 @@ if (typeof window !== 'undefined') {
 /** Supabase에서 최신 데이터를 가져와 로컬 DB를 갱신 (폴링·포커스 공용) */
 async function pollFromSupabase(): Promise<void> {
   if (!_apiSynced) return; // 초기 동기화 전에는 실행하지 않음
+  if (_isSyncing) return;  // 시드 업로드 중에는 폴링 중단 (덮어쓰기 방지)
   if (Date.now() - _lastUserWrite < 10_000) return; // 사용자가 최근 저장했으면 스킵
   try {
     const serverData = await supabaseGetAll();
@@ -236,10 +238,11 @@ export async function syncFromAPI(): Promise<void> {
       const serverSeedVersion = (serverData?._seed_version?.[0] as { v?: number } | undefined)?.v;
 
       if (!serverData || Object.keys(serverData).length === 0) {
-        // 첫 사용: DB_INIT 전체 업로드
-        const initWithVersion = { ...DB_INIT, _seed_version: [{ v: SEED_VERSION }] };
-        await uploadAllToSupabase(initWithVersion);
+        // 첫 사용: 로컬에 먼저 쓰고, 업로드는 백그라운드
         writeDB({ ...DB_INIT });
+        _isSyncing = true;
+        const initWithVersion = { ...DB_INIT, _seed_version: [{ v: SEED_VERSION }] };
+        uploadAllToSupabase(initWithVersion).finally(() => { _isSyncing = false; });
 
       } else if (serverSeedVersion !== SEED_VERSION) {
         // 시드 버전 불일치: 사용자 데이터는 보존하고 새 레코드만 추가 (id 기준 병합)
@@ -256,10 +259,11 @@ export async function syncFromAPI(): Promise<void> {
           merged[table] = [...serverRows, ...toAdd];
         }
         merged._seed_version = [{ v: SEED_VERSION }];
-        await uploadAllToSupabase(merged);
-        // _seed_version은 로컬 DB에 포함하지 않음
+        // 로컬에 먼저 써서 즉시 데이터 보이게 하고, 업로드는 백그라운드
         const { _seed_version: _, ...mergedLocal } = merged;
         writeDB(mergedLocal);
+        _isSyncing = true;
+        uploadAllToSupabase(merged).finally(() => { _isSyncing = false; });
 
       } else {
         // 버전 일치: 서버 데이터 사용 (_seed_version 제외)
@@ -275,6 +279,7 @@ export async function syncFromAPI(): Promise<void> {
       if (!_realtimeUnsubscribe) {
         _realtimeUnsubscribe = supabaseSubscribeChanges((tableName, rows) => {
           if (tableName === '_seed_version') return; // 버전 메타는 무시
+          if (_isSyncing) return; // 시드 업로드 중 Realtime 덮어쓰기 방지
           const db = getDB();
           writeDB({ ...db, [tableName]: rows });
         });

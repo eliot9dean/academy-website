@@ -42,6 +42,11 @@ export const mockStudents: Student[] = [
   { id: 's18', name: '신동우', grade: '중3', school: '별빛중학교',  parentName: '신학부', studentPhone: '010-1001-0018', parentPhone: '010-8899-0011', enrollDate: '2024-09-01', status: 'withdrawn', withdrawDate: '2025-11-15', withdrawReason: '이사',      classIds: [], tuitionPaid: true,  tuitionDueDate: '2025-11-15' },
   { id: 's19', name: '유나리', grade: '중2', school: '미래중학교',  parentName: '유학부', studentPhone: '010-1001-0019', parentPhone: '010-9900-1122', enrollDate: '2024-06-01', status: 'withdrawn', withdrawDate: '2025-12-20', withdrawReason: '경제적사유', classIds: [], tuitionPaid: true,  tuitionDueDate: '2025-12-20' },
   { id: 's20', name: '차준호', grade: '중1', school: '한빛중학교',  parentName: '차학부', studentPhone: '010-1001-0020', parentPhone: '010-0011-2233', enrollDate: '2025-09-01', status: 'withdrawn', withdrawDate: '2026-01-15', withdrawReason: '타학원이동', classIds: [], tuitionPaid: true,  tuitionDueDate: '2026-01-15' },
+  // ── 테스트 계정용 학생 ────────────────────────────────────────────────
+  { id: 's_t1', name: '테스트학생1', grade: '중1', school: '테스트중학교', parentName: '테스트학부모', studentPhone: '010-0000-0001', parentPhone: '010-0000-0010', enrollDate: '2026-03-01', status: 'enrolled', classIds: ['c_t1','c_t2'], tuitionPaid: true,  tuitionDueDate: '2026-05-01' },
+  { id: 's_t2', name: '테스트학생2', grade: '중1', school: '테스트중학교', parentName: '테스트학부모', studentPhone: '010-0000-0002', parentPhone: '010-0000-0010', enrollDate: '2026-03-01', status: 'enrolled', classIds: ['c_t1'],         tuitionPaid: false, tuitionDueDate: '2026-04-25' },
+  { id: 's_t3', name: '테스트학생3', grade: '중1', school: '테스트중학교', parentName: '테스트다른학부모', studentPhone: '010-0000-0003', parentPhone: '010-0000-0020', enrollDate: '2026-03-01', status: 'enrolled', classIds: ['c_t1'],         tuitionPaid: true,  tuitionDueDate: '2026-05-01' },
+  { id: 's_t4', name: '테스트학생4', grade: '중2', school: '테스트중학교', parentName: '테스트학부모', studentPhone: '010-0000-0004', parentPhone: '010-0000-0010', enrollDate: '2026-03-01', status: 'enrolled', classIds: ['c_t2'],         tuitionPaid: true,  tuitionDueDate: '2026-05-01' },
   // ── 4월 퇴원 학생 (퇴원 분석 더미) ──────────────────────────────────
   { id: 's21', name: '고은별', grade: '중2', school: '별빛중학교',  parentName: '고학부', studentPhone: '010-1001-0021', parentPhone: '010-1122-4433', enrollDate: '2024-09-01', status: 'withdrawn', withdrawDate: '2026-04-05', withdrawReason: '타학원이동', classIds: [], tuitionPaid: true,  tuitionDueDate: '2026-04-05' },
   { id: 's22', name: '남기준', grade: '중1', school: '한빛중학교',  parentName: '남학부', studentPhone: '010-1001-0022', parentPhone: '010-2233-5544', enrollDate: '2025-03-01', status: 'withdrawn', withdrawDate: '2026-04-12', withdrawReason: '경제적사유', classIds: [], tuitionPaid: false, tuitionDueDate: '2026-04-12' },
@@ -52,10 +57,13 @@ export const mockStudents: Student[] = [
 
 // ─── CLASSES ──────────────────────────────────────────────────
 export const mockClasses: ClassInfo[] = [
-  { id: 'c1', name: '중1 영어 A반', teacherId: 'u2', subject: '영어', days: ['월','수','금'], startTime: '16:00', endTime: '17:30', studentIds: ['s1','s2','s6','s9','s11','s15'], grade: '중1' },
-  { id: 'c2', name: '중2 수학 B반', teacherId: 'u3', subject: '수학', days: ['화','목'],     startTime: '17:00', endTime: '19:00', studentIds: ['s3','s4','s12'],              grade: '중2' },
-  { id: 'c3', name: '중3 국어 C반', teacherId: 'u4', subject: '국어', days: ['월','목'],     startTime: '19:00', endTime: '21:00', studentIds: ['s1','s5','s10','s13'],        grade: '중3' },
-  { id: 'c4', name: '중1 영어 D반', teacherId: 'u2', subject: '영어', days: ['화','수','목'], startTime: '11:00', endTime: '12:30', studentIds: ['s6','s15'],                   grade: '중1' },
+  { id: 'c1', name: '중1 영어 A반', teacherId: 'u2', subject: '영어', days: ['월','수','금'], startTime: '16:00', endTime: '17:30', studentIds: ['s1','s2','s6','s9','s11','s15'],       grade: '중1' },
+  { id: 'c2', name: '중2 수학 B반', teacherId: 'u3', subject: '수학', days: ['화','목'],     startTime: '17:00', endTime: '19:00', studentIds: ['s3','s4','s12'],                    grade: '중2' },
+  { id: 'c3', name: '중3 국어 C반', teacherId: 'u4', subject: '국어', days: ['월','목'],     startTime: '19:00', endTime: '21:00', studentIds: ['s1','s5','s10','s13'],             grade: '중3' },
+  { id: 'c4', name: '중1 영어 D반', teacherId: 'u2', subject: '영어', days: ['화','수','목'], startTime: '11:00', endTime: '12:30', studentIds: ['s6','s15'],                        grade: '중1' },
+  // ── 테스트 선생님(u_tt) 담당 반 ─────────────────────────────────────────────
+  { id: 'c_t1', name: '테스트 영어반', teacherId: 'u_tt', subject: '영어', days: ['월','수','금'], startTime: '16:00', endTime: '17:30', studentIds: ['s_t1','s_t2','s_t3'], grade: '중1' },
+  { id: 'c_t2', name: '테스트 수학반', teacherId: 'u_tt', subject: '수학', days: ['화','목'],     startTime: '17:00', endTime: '19:00', studentIds: ['s_t1','s_t4'],          grade: '중2' },
 ];
 
 // ─── ATTENDANCE ───────────────────────────────────────────────
