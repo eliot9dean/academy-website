@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>관리자(원장) 완전 가이드 — 학원관리 시스템</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="page">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-icon">🏫</div><span>가이드 블로그</span></div>
+    <nav>
+      <div class="group">시작하기</div>
+      <a href="index.html">📖 인덱스</a>
+      <a href="00-overview.html">🏗️ 시스템 개요</a>
+      <div class="group">역할별 가이드</div>
+      <a href="01-admin-guide.html" class="active">👑 관리자(원장)</a>
+      <a href="02-teacher-guide.html">📚 선생님</a>
+      <a href="03-staff-guide.html">🖥️ 스탭(데스크)</a>
+      <a href="04-parent-guide.html">👨‍👩‍👧 학부모</a>
+      <div class="group">공통</div>
+      <a href="05-common-tips.html">💡 사용 팁</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="post-meta">
+      <span class="tag admin">관리자</span>
+      <span>약 12분</span>
+    </div>
+    <h1>관리자(원장) 완전 가이드</h1>
+    <p class="subtitle">학원의 모든 숫자를 한 화면에서 보고 결정하는 자리. 매일·매주·매월 무엇을 봐야 하는지를 화면 단위로 정리했습니다.</p>
+
+    <figure>
+      <img src="images/admin-hub.png" alt="관리자 대시보드 허브" loading="lazy" />
+      <figcaption>관리자 대시보드 허브 — 7개 핵심 화면이 카드로 모여있다</figcaption>
+    </figure>
+
+    <h2>0. 첫 로그인 후 30분 셋업</h2>
+    <ol>
+      <li><strong>DB 관리</strong> 메뉴 → 사용자 탭에서 함께 일할 선생님·스탭 계정을 추가합니다.</li>
+      <li>학생/반 데이터를 가져옵니다 (엑셀 일괄 업로드 또는 직접 입력).</li>
+      <li>좌측 상단 사용자 패널의 🔑 아이콘으로 비밀번호를 변경합니다.</li>
+      <li>우측 상단의 "📅 오늘 날짜"가 시스템 기준일과 맞는지 확인합니다.</li>
+    </ol>
+    <div class="tip">처음에는 <strong>테스트 계정</strong>으로 화면을 둘러본 뒤, 실제 데이터를 가져오는 것을 권장합니다. 테스트 모드는 어떤 입력을 해도 실제 DB에 반영되지 않습니다.</div>
+
+    <h2>1. 일정 관리 (📅)</h2>
+    <p>학원 전체 일정을 캘린더 형태로 관리하는 화면입니다.</p>
+
+    <figure>
+      <img src="images/admin-schedule.png" alt="관리자 - 일정관리 화면" loading="lazy" />
+      <figcaption>일정 관리 — 카테고리(상담·회의·행사·외부)별 색상 분류 + 한 달 캘린더 뷰</figcaption>
+    </figure>
+
+    <h3>화면 상단의 마케팅 티커</h3>
+    <p>화면 최상단을 가로지르는 파란 박스 <strong>"뼈때리는 마케팅"</strong>은 봄날(bomnal.net) 칼럼의 최신 글을 자동으로 보여줍니다.</p>
+    <ul>
+      <li>흘러가는 제목을 <strong>클릭하면 해당 글이 새 탭에서 열립니다.</strong></li>
+      <li>학원 마케팅 인사이트를 매일 짧게 흡수하기 좋은 코너입니다.</li>
+    </ul>
+
+    <h3>일정 카드 만들기</h3>
+    <ul>
+      <li>"+ 일정 추가" 버튼 → 제목·날짜·시간·반·메모 입력</li>
+      <li>색상으로 카테고리(수업/시험/공휴일/내부미팅) 구분</li>
+      <li>반복 일정은 "매주", "매월" 옵션으로 한 번에 등록</li>
+    </ul>
+
+    <h2>2. 데일리 리포트 (📨)</h2>
+    <p>선생님이 매일 작성한 수업 보고서를 한 페이지에서 모아보는 화면입니다.</p>
+
+    <figure>
+      <img src="images/admin-reports.png" alt="관리자 - 데일리 리포트" loading="lazy" />
+      <figcaption>데일리 리포트 — 어떤 선생님이 어느 반에서 무엇을 했는지 한 번에 본다</figcaption>
+    </figure>
+
+    <h3>무엇을 볼 수 있나</h3>
+    <ul>
+      <li>어떤 선생님이 오늘 어느 반에서 무엇을 했는지</li>
+      <li>학생별 출결 / 숙제 / 시험 점수 / 관찰 메모</li>
+      <li>결석·미숙제 학생의 자동 하이라이트</li>
+    </ul>
+    <blockquote><p>이 화면을 매일 18:00 이후 5분만 봐도 학원의 70%가 보입니다.</p></blockquote>
+
+    <h2>3. 등록전환율 (📊)</h2>
+    <p>상담 → 시범수업 → 정식 등록의 깔때기(funnel)를 분석합니다.</p>
+
+    <figure>
+      <img src="images/admin-conversion.png" alt="관리자 - 등록전환율" loading="lazy" />
+      <figcaption>등록전환율 — 상담·시범·등록의 단계별 전환을 막대그래프로 시각화</figcaption>
+    </figure>
+
+    <h3>핵심 지표</h3>
+    <ul>
+      <li><strong>상담 건수</strong>: 이번 달 신규 상담 인원</li>
+      <li><strong>시범수업 전환율</strong>: 상담 중 몇 %가 시범까지 왔는가</li>
+      <li><strong>등록 전환율</strong>: 시범수업 중 몇 %가 정식 등록으로 이어졌는가</li>
+      <li><strong>유입 경로별 전환율</strong>: 지인 추천 / 광고 / 검색 / 기타</li>
+    </ul>
+
+    <h2>4. 퇴원 분석 (📉)</h2>
+    <p>학원 매출의 진짜 적은 신규 등록 부족이 아니라 <em>이탈</em>입니다.</p>
+
+    <figure>
+      <img src="images/admin-withdrawal.png" alt="관리자 - 퇴원 분석" loading="lazy" />
+      <figcaption>퇴원 분석 — 사유 분포 + 이탈 위험 학생 자동 추천</figcaption>
+    </figure>
+
+    <ul>
+      <li>월별 퇴원 인원 추이</li>
+      <li><strong>퇴원 사유 분포</strong> (성적 / 비용 / 친구관계 / 이사 / 기타)</li>
+      <li>퇴원 직전 3개월의 출결·성적 패턴</li>
+      <li><strong>이탈 위험 학생 자동 추천</strong> (출결률·점수 하락 학생)</li>
+    </ul>
+
+    <h2>5. 재무현황 (💰)</h2>
+    <p>학원의 캐시플로우를 한 페이지에서 봅니다.</p>
+
+    <figure>
+      <img src="images/admin-finance.png" alt="관리자 - 재무현황" loading="lazy" />
+      <figcaption>재무현황 — 수강료 입금/미납·카테고리별 지출·월별 손익 추이</figcaption>
+    </figure>
+
+    <h2>6. 선생님별 수업현황 (🏫)</h2>
+    <figure>
+      <img src="images/admin-classes.png" alt="관리자 - 선생님별 수업현황" loading="lazy" />
+      <figcaption>선생님별 수업현황 — 모든 강사의 이번 주 수업과 출결률을 한 화면에</figcaption>
+    </figure>
+
+    <h2>7. DB 관리 (🗄️)</h2>
+    <p>시스템의 모든 원본 데이터를 직접 보고 수정할 수 있는 관리자 전용 화면입니다.</p>
+
+    <figure>
+      <img src="images/admin-database.png" alt="관리자 - DB 관리" loading="lazy" />
+      <figcaption>DB 관리 — 사용자·학생·반·교재·가입승인 등을 직접 편집</figcaption>
+    </figure>
+
+    <div class="warn">이 화면은 <strong>수정이 즉시 시스템 전체에 반영</strong>됩니다. 단순 조회는 다른 메뉴를 사용하세요. 대량 수정은 반드시 백업(CSV 내보내기) 후 진행하세요.</div>
+
+    <h2>8. 매일 / 매주 / 매월 루틴 추천</h2>
+    <div class="routine">
+      <div class="col">
+        <h4>매일 (5분)</h4>
+        <ul>
+          <li>데일리 리포트 — 결석·미숙제 확인</li>
+          <li>마케팅 티커 글 1개 읽기</li>
+        </ul>
+      </div>
+      <div class="col weekly">
+        <h4>매주 월요일 (15분)</h4>
+        <ul>
+          <li>퇴원 분석 — 이탈 위험 리스트</li>
+          <li>등록전환율 — 지난주 상담 결과</li>
+          <li>일정 관리 — 이번 주 일정 점검</li>
+        </ul>
+      </div>
+      <div class="col monthly">
+        <h4>매월 1일 (30분)</h4>
+        <ul>
+          <li>재무현황 — 지난달 손익 마감</li>
+          <li>퇴원 분석 — 사유 분포 회의 자료</li>
+          <li>DB 관리 — 신규 가입 일괄 승인</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>9. 자주 묻는 질문</h2>
+    <h3>Q. 데이터가 갑자기 사라진 것 같아요.</h3>
+    <p>화면을 새로고침해 보세요. 시스템은 로컬 캐시 + 서버 동기화 이중 안전장치를 갖추고 있어 실제 데이터 소실은 거의 발생하지 않습니다. 그래도 안 보이면 우하단 💬 오픈톡 문의로 연락주세요.</p>
+    <h3>Q. 선생님이 어제 입력을 깜빡했는데 소급해서 수정 가능한가요?</h3>
+    <p>가능합니다. 데일리 리포트 화면에서 날짜를 선택해 과거 데이터를 직접 수정할 수 있습니다.</p>
+    <h3>Q. 학부모에게 보여주고 싶지 않은 메모는 어떻게 분리하나요?</h3>
+    <p>수업일지의 "관찰 메모"는 내부용입니다. 학부모 화면에는 표시되지 않습니다.</p>
+
+    <div class="next-prev">
+      <a href="00-overview.html"><span class="label">← 이전</span>시스템 개요</a>
+      <a class="right" href="02-teacher-guide.html"><span class="label">다음 →</span>선생님 가이드</a>
+    </div>
+  </main>
+</div>
+<a class="floating-cta" href="https://open.kakao.com/o/pFiLYR3h" target="_blank" rel="noopener">💬 오픈톡 문의</a>
+</body>
+</html>

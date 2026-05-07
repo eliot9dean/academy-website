@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>스탭(데스크) 완전 가이드 — 학원관리 시스템</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="page">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-icon">🏫</div><span>가이드 블로그</span></div>
+    <nav>
+      <div class="group">시작하기</div>
+      <a href="index.html">📖 인덱스</a>
+      <a href="00-overview.html">🏗️ 시스템 개요</a>
+      <div class="group">역할별 가이드</div>
+      <a href="01-admin-guide.html">👑 관리자(원장)</a>
+      <a href="02-teacher-guide.html">📚 선생님</a>
+      <a href="03-staff-guide.html" class="active">🖥️ 스탭(데스크)</a>
+      <a href="04-parent-guide.html">👨‍👩‍👧 학부모</a>
+      <div class="group">공통</div>
+      <a href="05-common-tips.html">💡 사용 팁</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="post-meta">
+      <span class="tag staff">스탭</span>
+      <span>약 12분</span>
+    </div>
+    <h1>스탭(데스크) 완전 가이드</h1>
+    <p class="subtitle">학원의 첫인상은 데스크에서 결정됩니다. 스탭은 "사람"과 "돈"의 흐름을 모두 관리하는 운영의 심장입니다.</p>
+
+    <h2>1. 학생 정보 (👤)</h2>
+    <p>학원의 모든 학생을 한눈에 보고 검색·필터·수정하는 마스터 화면입니다.</p>
+
+    <figure>
+      <img src="images/staff-students.png" alt="스탭 - 학생 정보" loading="lazy" />
+      <figcaption>학생 정보 — 이름·학년·전화·반·재원상태로 빠르게 검색</figcaption>
+    </figure>
+
+    <h3>핵심 기능</h3>
+    <ul>
+      <li>이름·학년·전화번호 검색</li>
+      <li>반·학년·재원 상태별 필터</li>
+      <li>학생 카드 클릭 → 상세 페이지 (출결/성적/수강료/상담 통합)</li>
+    </ul>
+
+    <h2>2. 수강 관리 (📒)</h2>
+    <p>학생별 수강중인 반과 수강료 상태를 관리합니다.</p>
+
+    <figure>
+      <img src="images/staff-tuition.png" alt="스탭 - 수강 관리" loading="lazy" />
+      <figcaption>수강 관리 — 반 배정·할인 코드·수강 시작/종료일 통합 관리</figcaption>
+    </figure>
+
+    <h3>수강료 누락 방지 체크리스트</h3>
+    <table>
+      <thead><tr><th>날짜</th><th>해야 할 일</th></tr></thead>
+      <tbody>
+        <tr><td>매월 1일</td><td>신규 청구서 자동 생성 확인</td></tr>
+        <tr><td>매월 5일</td><td>미납 알림 SMS 발송</td></tr>
+        <tr><td>매월 10일</td><td>미납 학생 학부모에게 직접 통화</td></tr>
+        <tr><td>매월 25일</td><td>다음달 수강 등록 안내</td></tr>
+      </tbody>
+    </table>
+
+    <h2>3. 교재 관리 (📚)</h2>
+    <p>교재 재고와 학생별 지급 이력을 관리합니다.</p>
+
+    <figure>
+      <img src="images/staff-textbooks.png" alt="스탭 - 교재 관리" loading="lazy" />
+      <figcaption>교재 관리 — 입고·출고·재고와 학생별 지급 이력을 한 곳에서</figcaption>
+    </figure>
+
+    <ul>
+      <li>교재 입고 / 출고 / 재고</li>
+      <li>학생별 교재 지급 이력 (반복 청구 방지)</li>
+      <li>교재비 자동 청구 (수강료 합산 또는 별도 청구)</li>
+      <li>부족 재고 알림</li>
+    </ul>
+
+    <h2>4. 재원 / 퇴원 관리 (📋)</h2>
+    <p>학원 등록의 시작과 끝을 다루는 화면입니다.</p>
+
+    <figure>
+      <img src="images/staff-enrollment.png" alt="스탭 - 재원/퇴원 관리" loading="lazy" />
+      <figcaption>재원/퇴원 관리 — 상담→시범→등록 / 휴원→퇴원 흐름을 한 페이지에서 추적</figcaption>
+    </figure>
+
+    <h3>등록 프로세스</h3>
+    <ol>
+      <li><strong>상담 등록</strong> — 전화/방문 상담 기록 (성함·연락처·상담 내용·관심 반)</li>
+      <li><strong>시범수업 예약</strong> — 일정 잡고 SMS 자동 발송</li>
+      <li><strong>시범수업 결과</strong> — 등록/보류/거절 입력</li>
+      <li><strong>정식 등록</strong> — 학생 정보 입력 + 첫 수강료 청구</li>
+    </ol>
+
+    <h3>퇴원 프로세스</h3>
+    <ol>
+      <li><strong>퇴원 사유 청취</strong> — 표준 카테고리 선택 + 자유 메모</li>
+      <li><strong>마지막 수업일 확정</strong></li>
+      <li><strong>수강료 정산</strong> (잔여일 환불 or 추가 청구)</li>
+      <li><strong>시스템 상태를 "퇴원"으로 변경</strong> — 학부모 계정 자동 비활성화</li>
+    </ol>
+    <div class="info">모든 퇴원 사유는 관리자 화면의 <strong>"퇴원 분석"</strong>에 자동 집계됩니다. 사유 입력에 성의를 다해주세요. 한 줄의 메모가 학원의 다음 분기를 바꿉니다.</div>
+
+    <h2>5. 재무 관리 (💰)</h2>
+    <p>스탭이 직접 다루는 일일 금전 관리 화면입니다.</p>
+
+    <figure>
+      <img src="images/staff-finance.png" alt="스탭 - 재무 관리" loading="lazy" />
+      <figcaption>재무 관리 — 입금 처리·지출 입력·미납자 자동 리스트</figcaption>
+    </figure>
+
+    <h2>6. 학부모 응대 시 화면 활용</h2>
+    <p>전화/방문 상담 중 가장 빛나는 사용법입니다.</p>
+    <h3>학부모 전화가 왔을 때 (30초 안에 준비)</h3>
+    <ol>
+      <li><strong>학생 정보</strong> → 검색 → 학생 카드 클릭</li>
+      <li>한 화면에서 보이는 것:
+        <ul>
+          <li>최근 출결 / 점수 / 숙제 상황</li>
+          <li>담임 선생님의 관찰 메모</li>
+          <li>수강료 납부 상태</li>
+          <li>지난 상담 기록</li>
+        </ul>
+      </li>
+      <li>이 정보로 학부모의 어떤 질문에도 즉시 응답 가능</li>
+    </ol>
+
+    <h2>7. 매일 / 매주 / 매월 루틴</h2>
+    <div class="routine">
+      <div class="col">
+        <h4>매일 (15분)</h4>
+        <ul>
+          <li>신규 상담 입력</li>
+          <li>입금 처리</li>
+          <li>미납 1차 안내 SMS</li>
+        </ul>
+      </div>
+      <div class="col weekly">
+        <h4>매주 월요일 (30분)</h4>
+        <ul>
+          <li>지난주 시범수업 결과 정리</li>
+          <li>등록전환율 보고</li>
+          <li>신규 등록자 환영 SMS</li>
+        </ul>
+      </div>
+      <div class="col monthly">
+        <h4>매월 1·5·10·25일</h4>
+        <ul>
+          <li>1일: 청구서 일괄 발송</li>
+          <li>5일: 미납 알림</li>
+          <li>10일: 미납 직접 통화</li>
+          <li>25일: 다음달 등록 안내</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>8. 자주 묻는 질문</h2>
+    <h3>Q. 학부모가 영수증을 종이로 달라고 해요.</h3>
+    <p>입금 확인 후 영수증 PDF를 출력해 발행하세요. 학부모용 SMS에는 "영수증 보러가기" 링크가 자동 첨부됩니다.</p>
+    <h3>Q. 형제 할인을 적용하려면?</h3>
+    <p>수강 관리 → 학생 선택 → "할인 코드" → "형제 할인 (X%)" 선택. 자동으로 매달 적용됩니다.</p>
+    <h3>Q. 두 명의 스탭이 동시에 같은 학생을 수정하면?</h3>
+    <p>시스템은 마지막 저장을 우선으로 합니다. 다만 화면이 실시간 동기화되므로 충돌 가능성은 매우 낮습니다.</p>
+
+    <div class="next-prev">
+      <a href="02-teacher-guide.html"><span class="label">← 이전</span>선생님 가이드</a>
+      <a class="right" href="04-parent-guide.html"><span class="label">다음 →</span>학부모 가이드</a>
+    </div>
+  </main>
+</div>
+<a class="floating-cta" href="https://open.kakao.com/o/pFiLYR3h" target="_blank" rel="noopener">💬 오픈톡 문의</a>
+</body>
+</html>

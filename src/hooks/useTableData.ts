@@ -202,20 +202,55 @@ if (typeof window !== 'undefined') {
   });
 }
 
+/**
+ * 두 DB를 안전하게 병합한다 (서버 → 로컬 방향).
+ * 핵심 원칙: "축소 덮어쓰기 금지"
+ *  - 서버 테이블 행 수가 로컬보다 적거나 비어 있으면 그 테이블은 로컬을 유지한다.
+ *  - 서버에만 있는 테이블은 그대로 추가한다.
+ *  - 서버 테이블이 로컬보다 많거나 같을 때만 서버 버전으로 교체한다.
+ *  → Supabase 일시정지 · RLS 차단 · 세션 만료 · 네트워크 깜빡임 등으로
+ *    빈/축소 응답이 와도 데이터가 사라지지 않는다.
+ */
+function safeMergeFromServer(
+  local: Record<string, Row[]>,
+  server: Record<string, Row[]>,
+): { merged: Record<string, Row[]>; changed: boolean } {
+  const merged: Record<string, Row[]> = { ...local };
+  let changed = false;
+  for (const [table, serverRows] of Object.entries(server)) {
+    if (!Array.isArray(serverRows)) continue;
+    const localRows = local[table];
+    // 로컬에 없는 테이블 → 서버 것 그대로
+    if (!localRows) {
+      merged[table] = serverRows;
+      changed = true;
+      continue;
+    }
+    // 서버가 더 적으면 로컬 유지 (축소 방지)
+    if (serverRows.length < localRows.length) continue;
+    // 서버가 더 많거나 같으면 서버로 교체
+    if (JSON.stringify(serverRows) !== JSON.stringify(localRows)) {
+      merged[table] = serverRows;
+      changed = true;
+    }
+  }
+  return { merged, changed };
+}
+
 /** Supabase에서 최신 데이터를 가져와 로컬 DB를 갱신 (폴링·포커스 공용) */
 async function pollFromSupabase(): Promise<void> {
   if (!_apiSynced) return; // 초기 동기화 전에는 실행하지 않음
   if (_isSyncing) return;  // 시드 업로드 중에는 폴링 중단 (덮어쓰기 방지)
+  if (_isTestMode) return; // 테스트 모드: 폴링 없음 (메모리 전용)
   if (Date.now() - _lastUserWrite < 10_000) return; // 사용자가 최근 저장했으면 스킵
   try {
     const serverData = await supabaseGetAll();
-    if (!serverData) return;
+    if (!serverData) return; // null이면 무조건 무시 (이미 supabaseGetAll에서 빈 응답을 null로 변환)
     const { _seed_version: _sv, ...serverLocal } = serverData;
-    const { data: normalized, changed } = normalizeDays(serverLocal);
-    if (JSON.stringify(getDB()) !== JSON.stringify(normalized)) {
-      writeDB(normalized);
-    }
-    if (changed) supabaseSaveTable('classes', normalized.classes).catch(() => {});
+    const { merged, changed } = safeMergeFromServer(getDB(), serverLocal);
+    const { data: normalized, changed: daysChanged } = normalizeDays(merged);
+    if (changed || daysChanged) writeDB(normalized);
+    if (daysChanged) supabaseSaveTable('classes', normalized.classes).catch(() => {});
   } catch { /* 무시 */ }
 }
 
@@ -288,11 +323,20 @@ export async function syncFromAPI(): Promise<void> {
         uploadAllToSupabase(merged).finally(() => { _isSyncing = false; });
 
       } else {
-        // 버전 일치: 서버 데이터 사용 (_seed_version 제외)
+        // 버전 일치: 서버 데이터를 로컬과 안전 병합 (축소 덮어쓰기 금지)
         const { _seed_version: _, ...serverLocal } = serverData;
-        const { data: normalized, changed } = normalizeDays(serverLocal);
+        const localBefore = getDB();
+        const { merged } = safeMergeFromServer(localBefore, serverLocal);
+        const { data: normalized, changed: daysChanged } = normalizeDays(merged);
         writeDB(normalized);
-        if (changed) supabaseSaveTable('classes', normalized.classes).catch(() => {});
+        if (daysChanged) supabaseSaveTable('classes', normalized.classes).catch(() => {});
+        // 로컬에 있었지만 서버에 없는/적은 테이블은 다시 서버에 올려 격차 해소
+        for (const [tbl, rows] of Object.entries(normalized)) {
+          const serverRows = serverLocal[tbl];
+          if (!serverRows || serverRows.length < rows.length) {
+            supabaseSaveTable(tbl, rows).catch(() => {});
+          }
+        }
       }
       _apiSynced = true;
 
@@ -301,7 +345,15 @@ export async function syncFromAPI(): Promise<void> {
         _realtimeUnsubscribe = supabaseSubscribeChanges((tableName, rows) => {
           if (tableName === '_seed_version') return; // 버전 메타는 무시
           if (_isSyncing) return; // 시드 업로드 중 Realtime 덮어쓰기 방지
+          if (_isTestMode) return; // 테스트 모드: Realtime 갱신 차단
+          if (!Array.isArray(rows)) return; // 잘못된 페이로드 방어
+          // 사용자가 방금 직접 저장했다면 서버 echo로 덮어쓰기 방지
+          if (Date.now() - _lastUserWrite < 5_000) return;
+          // 축소 덮어쓰기 방지: rows가 현재보다 적으면 무시
           const db = getDB();
+          const currentRows = db[tableName] ?? [];
+          if (rows.length < currentRows.length) return;
+          if (JSON.stringify(rows) === JSON.stringify(currentRows)) return;
           writeDB({ ...db, [tableName]: rows });
         });
       }

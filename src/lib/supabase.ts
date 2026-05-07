@@ -90,18 +90,25 @@ export function supabaseSubscribeChanges(onUpdate: (tableName: string, rows: Row
 }
 
 // ── 전체 데이터 조회 ──────────────────────────────────────────────────────────
+// 에러나 RLS 차단 등으로 인한 빈 응답은 null을 반환하여 호출부가 덮어쓰지 않도록 한다.
 export async function supabaseGetAll(): Promise<Record<string, Row[]> | null> {
   const { data, error } = await supabase
     .from('ams_tables')
     .select('name, data');
 
+  // 명시적 에러 또는 응답 없음 → null
   if (error || !data) return null;
+  // 행이 0개 → 명시적 null (호출부가 빈 객체로 오인하지 않도록)
+  if (data.length === 0) return null;
 
   const result: Record<string, Row[]> = {};
   for (const row of data) {
+    if (!row || typeof row.name !== 'string') continue;
+    // data가 배열이 아니면 무시 (null/undefined/object 방어)
+    if (!Array.isArray(row.data)) continue;
     result[row.name] = row.data as Row[];
   }
-  return result;
+  return Object.keys(result).length === 0 ? null : result;
 }
 
 // ── 테이블 저장 (upsert) ──────────────────────────────────────────────────────

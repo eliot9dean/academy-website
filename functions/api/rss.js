@@ -19,7 +19,8 @@ export async function onRequestGet() {
 
     const xml = await res.text();
 
-    // RSS <item> 파싱 (CDATA 포함)
+    // RSS <item> 파싱 (CDATA 포함) — /column 게시물만 통과
+    const Q = 'YToxOntzOjEyOiJrZXl3b3JkX3R5cGUiO3M6MzoiYWxsIjt9';
     const items = [];
     const itemRe = /<item>([\s\S]*?)<\/item>/g;
     let m;
@@ -30,9 +31,15 @@ export async function onRequestGet() {
         return (r.exec(block)?.[1] ?? '').trim();
       };
       const title   = get('title');
-      const link    = get('link');
+      const rawLink = get('link');
       const pubDate = get('pubDate');
-      if (title) items.push({ title, link, pubDate });
+      if (!title || !rawLink) continue;
+      // /column 게시물만 (cup·notice 등 제외)
+      if (!/\/column/i.test(rawLink)) continue;
+      const idxMatch = /[?&]idx=(\d+)/.exec(rawLink);
+      if (!idxMatch) continue;
+      const link = `https://www.bomnal.net/column/?q=${Q}&bmode=view&idx=${idxMatch[1]}&t=board`;
+      items.push({ title, link, pubDate });
     }
 
     return new Response(JSON.stringify({ status: 'ok', items }), { headers: corsHeaders });

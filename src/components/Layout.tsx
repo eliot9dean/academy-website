@@ -7,6 +7,10 @@ import type { UserRole } from '../types';
 
 interface NavItem { to: string; label: string; icon: string }
 
+// 외부 링크 (사이드바 하단 고정 / 플로팅 버튼)
+const KAKAO_CONSULT_URL = 'https://open.kakao.com/o/s2p31JWe';   // 1:1 마케팅 상담
+const KAKAO_FLOAT_URL   = 'https://open.kakao.com/o/pFiLYR3h';   // 오픈톡 문의 (전 역할 공통)
+
 const navByRole: Record<UserRole, NavItem[]> = {
   admin: [
     { to: '/admin/classes',      label: '선생님별 수업현황', icon: '🏫' },
@@ -262,7 +266,8 @@ export default function Layout() {
         )}
 
         {/* Nav */}
-        <nav className="flex-1 py-3 overflow-y-auto space-y-0.5">
+        <nav className="flex-1 py-3 overflow-y-auto space-y-0.5 flex flex-col">
+          <div className="space-y-0.5">
           {navItems.map(item => {
             const isActive = location.pathname.startsWith(item.to);
             return (
@@ -311,6 +316,41 @@ export default function Layout() {
               </NavLink>
             );
           })}
+          </div>
+
+          {/* 사이드바 하단 고정: 1:1 마케팅 상담 (외부 카카오 오픈챗) */}
+          <a
+            href={KAKAO_CONSULT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={collapsed ? '1:1 마케팅 상담' : undefined}
+            className="flex items-center gap-3 mx-2 mt-auto px-3 py-2.5 rounded-xl transition-all duration-150"
+            style={{
+              background: 'linear-gradient(135deg, rgba(250,204,21,0.15), rgba(251,191,36,0.10))',
+              color: '#FCD34D',
+              border: '1px solid rgba(250,204,21,0.35)',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.background = 'linear-gradient(135deg, rgba(250,204,21,0.30), rgba(251,191,36,0.20))';
+              el.style.color = '#FEF3C7';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.background = 'linear-gradient(135deg, rgba(250,204,21,0.15), rgba(251,191,36,0.10))';
+              el.style.color = '#FCD34D';
+            }}
+          >
+            <span className="text-base flex-shrink-0 leading-none">💬</span>
+            {!collapsed && (
+              <span
+                className="truncate"
+                style={{ fontSize: '0.8125rem', fontWeight: 600, letterSpacing: '-0.01em' }}
+              >
+                1:1 마케팅 상담
+              </span>
+            )}
+          </a>
         </nav>
 
         {/* 사이드바 접혔을 때 비밀번호 변경 버튼 */}
@@ -418,6 +458,109 @@ export default function Layout() {
           currentEmail={currentUser.email ?? ''}
         />
       )}
+
+      {/* 우하단 플로팅: 오픈톡 문의 (전 역할 공통) — 동그란 캡슐형 + 호버 라벨 */}
+      <a
+        href={KAKAO_FLOAT_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="오픈톡 문의"
+        title="오픈톡 문의"
+        className="ams-float-chat"
+      >
+        <span className="ams-float-icon" aria-hidden="true">💬</span>
+        <span className="ams-float-label">오픈톡 문의</span>
+        {/* 살랑살랑 떠오르는 펄스 링 */}
+        <span className="ams-float-pulse" aria-hidden="true" />
+      </a>
+
+      <style>{`
+        .ams-float-chat {
+          position: fixed;
+          right: 22px;
+          bottom: 22px;
+          z-index: 40;
+          display: flex;
+          align-items: center;
+          gap: 0;
+          height: 60px;
+          width: 60px;
+          padding: 0;
+          border-radius: 9999px;
+          background: linear-gradient(135deg, #FFE34A 0%, #FACC15 60%, #F59E0B 100%);
+          color: #3C1E1E;
+          text-decoration: none;
+          font-weight: 700;
+          font-size: 0.875rem;
+          box-shadow:
+            0 10px 28px rgba(250,204,21,0.55),
+            0 4px 10px rgba(0,0,0,0.12),
+            inset 0 1px 0 rgba(255,255,255,0.5);
+          overflow: hidden;
+          transition:
+            width 0.32s cubic-bezier(0.34,1.56,0.64,1),
+            box-shadow 0.25s ease,
+            transform 0.25s ease;
+          animation: ams-float-bob 3.4s ease-in-out infinite;
+        }
+        .ams-float-chat:hover {
+          width: 168px;
+          box-shadow:
+            0 14px 36px rgba(250,204,21,0.65),
+            0 6px 14px rgba(0,0,0,0.18),
+            inset 0 1px 0 rgba(255,255,255,0.6);
+          transform: translateY(-2px);
+          animation-play-state: paused;
+        }
+        .ams-float-icon {
+          flex: 0 0 60px;
+          width: 60px;
+          height: 60px;
+          display: grid;
+          place-items: center;
+          font-size: 26px;
+          line-height: 1;
+          filter: drop-shadow(0 1px 0 rgba(255,255,255,0.4));
+        }
+        .ams-float-label {
+          white-space: nowrap;
+          opacity: 0;
+          transform: translateX(-6px);
+          padding-right: 18px;
+          letter-spacing: -0.01em;
+          transition:
+            opacity 0.2s ease 0.08s,
+            transform 0.28s cubic-bezier(0.34,1.56,0.64,1) 0.04s;
+        }
+        .ams-float-chat:hover .ams-float-label {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        .ams-float-pulse {
+          position: absolute;
+          inset: 0;
+          border-radius: 9999px;
+          pointer-events: none;
+          box-shadow: 0 0 0 0 rgba(250,204,21,0.6);
+          animation: ams-float-pulse 2.4s ease-out infinite;
+        }
+        .ams-float-chat:hover .ams-float-pulse { animation-play-state: paused; opacity: 0; }
+
+        @keyframes ams-float-bob {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-4px); }
+        }
+        @keyframes ams-float-pulse {
+          0%   { box-shadow: 0 0 0 0   rgba(250,204,21,0.55); }
+          70%  { box-shadow: 0 0 0 14px rgba(250,204,21,0); }
+          100% { box-shadow: 0 0 0 0   rgba(250,204,21,0); }
+        }
+        @media (max-width: 640px) {
+          .ams-float-chat { height: 54px; width: 54px; right: 16px; bottom: 16px; }
+          .ams-float-icon { width: 54px; height: 54px; flex-basis: 54px; font-size: 24px; }
+          .ams-float-chat:hover { width: 152px; }
+        }
+      `}</style>
     </div>
   );
 }
