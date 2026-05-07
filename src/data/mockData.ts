@@ -613,6 +613,47 @@ export const mockTestScores: TestScore[] = [
   { studentId: 's6',  classId: 'c4', date: '2026-04-17', type: 'daily', score: 93, maxScore: 100, testName: '4/17 개념테스트' },
   { studentId: 's15', classId: 'c4', date: '2026-04-17', type: 'daily', score: 88, maxScore: 100, testName: '4/17 개념테스트' },
 
+  // ── 성적표용 월간평가 데이터 ───────────────────────────────────────────────
+  // c1 영어 A반 — 4월 월간평가
+  { studentId: 's1',  classId: 'c1', date: '2026-04-30', type: 'monthly', score: 93, maxScore: 100, testName: '4월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:19, 듣기:18, 읽기:19, 쓰기:18, 말하기:19 } },
+  { studentId: 's2',  classId: 'c1', date: '2026-04-30', type: 'monthly', score: 76, maxScore: 100, testName: '4월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:15, 듣기:15, 읽기:16, 쓰기:15, 말하기:15 } },
+  { studentId: 's6',  classId: 'c1', date: '2026-04-30', type: 'monthly', score: 94, maxScore: 100, testName: '4월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:19, 듣기:19, 읽기:19, 쓰기:19, 말하기:18 } },
+  { studentId: 's9',  classId: 'c1', date: '2026-04-30', type: 'monthly', score: 71, maxScore: 100, testName: '4월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:14, 듣기:14, 읽기:15, 쓰기:14, 말하기:14 } },
+  { studentId: 's11', classId: 'c1', date: '2026-04-30', type: 'monthly', score: 87, maxScore: 100, testName: '4월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:17, 듣기:18, 읽기:18, 쓰기:17, 말하기:17 } },
+  { studentId: 's15', classId: 'c1', date: '2026-04-30', type: 'monthly', score: 89, maxScore: 100, testName: '4월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:18, 듣기:18, 읽기:18, 쓰기:17, 말하기:18 } },
+
+  // c2 수학 B반 — 월간평가 (1월, 3월, 4월)
+  { studentId: 's3',  classId: 'c2', date: '2026-01-29', type: 'monthly', score: 82, maxScore: 100, testName: '1월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:21, 연산:21, 응용:20, 서술:20 } },
+  { studentId: 's4',  classId: 'c2', date: '2026-01-29', type: 'monthly', score: 75, maxScore: 100, testName: '1월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:19, 연산:19, 응용:19, 서술:18 } },
+  { studentId: 's12', classId: 'c2', date: '2026-01-29', type: 'monthly', score: 61, maxScore: 100, testName: '1월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:16, 연산:15, 응용:15, 서술:15 } },
+  { studentId: 's3',  classId: 'c2', date: '2026-02-26', type: 'monthly', score: 85, maxScore: 100, testName: '2월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:22, 연산:21, 응용:21, 서술:21 } },
+  { studentId: 's4',  classId: 'c2', date: '2026-02-26', type: 'monthly', score: 77, maxScore: 100, testName: '2월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:20, 연산:19, 응용:19, 서술:19 } },
+  { studentId: 's12', classId: 'c2', date: '2026-02-26', type: 'monthly', score: 64, maxScore: 100, testName: '2월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:16, 연산:16, 응용:16, 서술:16 } },
+  { studentId: 's3',  classId: 'c2', date: '2026-03-28', type: 'monthly', score: 88, maxScore: 100, testName: '3월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:22, 연산:22, 응용:22, 서술:22 } },
+  { studentId: 's4',  classId: 'c2', date: '2026-03-28', type: 'monthly', score: 79, maxScore: 100, testName: '3월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:20, 연산:20, 응용:20, 서술:19 } },
+  { studentId: 's12', classId: 'c2', date: '2026-03-28', type: 'monthly', score: 67, maxScore: 100, testName: '3월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:17, 연산:17, 응용:17, 서술:16 } },
+  { studentId: 's3',  classId: 'c2', date: '2026-04-30', type: 'monthly', score: 91, maxScore: 100, testName: '4월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:23, 연산:23, 응용:23, 서술:22 } },
+  { studentId: 's4',  classId: 'c2', date: '2026-04-30', type: 'monthly', score: 81, maxScore: 100, testName: '4월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:21, 연산:20, 응용:20, 서술:20 } },
+  { studentId: 's12', classId: 'c2', date: '2026-04-30', type: 'monthly', score: 69, maxScore: 100, testName: '4월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:18, 연산:17, 응용:17, 서술:17 } },
+
+  // c3 국어 C반 — 월간평가 (1월, 2월, 3월, 4월)
+  { studentId: 's1',  classId: 'c3', date: '2026-01-29', type: 'monthly', score: 79, maxScore: 100, testName: '1월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:20, 독해:20, 문학:20, 쓰기:19 } },
+  { studentId: 's5',  classId: 'c3', date: '2026-01-29', type: 'monthly', score: 84, maxScore: 100, testName: '1월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:21, 독해:21, 문학:21, 쓰기:21 } },
+  { studentId: 's10', classId: 'c3', date: '2026-01-29', type: 'monthly', score: 68, maxScore: 100, testName: '1월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:17, 독해:17, 문학:17, 쓰기:17 } },
+  { studentId: 's13', classId: 'c3', date: '2026-01-29', type: 'monthly', score: 73, maxScore: 100, testName: '1월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:18, 독해:19, 문학:18, 쓰기:18 } },
+  { studentId: 's1',  classId: 'c3', date: '2026-02-26', type: 'monthly', score: 81, maxScore: 100, testName: '2월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:20, 독해:21, 문학:20, 쓰기:20 } },
+  { studentId: 's5',  classId: 'c3', date: '2026-02-26', type: 'monthly', score: 86, maxScore: 100, testName: '2월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:22, 독해:21, 문학:22, 쓰기:21 } },
+  { studentId: 's10', classId: 'c3', date: '2026-02-26', type: 'monthly', score: 70, maxScore: 100, testName: '2월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:18, 독해:17, 문학:18, 쓰기:17 } },
+  { studentId: 's13', classId: 'c3', date: '2026-02-26', type: 'monthly', score: 76, maxScore: 100, testName: '2월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:19, 독해:19, 문학:19, 쓰기:19 } },
+  { studentId: 's1',  classId: 'c3', date: '2026-03-30', type: 'monthly', score: 83, maxScore: 100, testName: '3월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:21, 독해:21, 문학:21, 쓰기:20 } },
+  { studentId: 's5',  classId: 'c3', date: '2026-03-30', type: 'monthly', score: 88, maxScore: 100, testName: '3월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:22, 독해:22, 문학:22, 쓰기:22 } },
+  { studentId: 's10', classId: 'c3', date: '2026-03-30', type: 'monthly', score: 72, maxScore: 100, testName: '3월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:18, 독해:18, 문학:18, 쓰기:18 } },
+  { studentId: 's13', classId: 'c3', date: '2026-03-30', type: 'monthly', score: 78, maxScore: 100, testName: '3월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:20, 독해:20, 문학:19, 쓰기:19 } },
+  { studentId: 's1',  classId: 'c3', date: '2026-04-30', type: 'monthly', score: 85, maxScore: 100, testName: '4월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:21, 독해:22, 문학:21, 쓰기:21 } },
+  { studentId: 's5',  classId: 'c3', date: '2026-04-30', type: 'monthly', score: 90, maxScore: 100, testName: '4월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:23, 독해:23, 문학:22, 쓰기:22 } },
+  { studentId: 's10', classId: 'c3', date: '2026-04-30', type: 'monthly', score: 74, maxScore: 100, testName: '4월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:19, 독해:18, 문학:19, 쓰기:18 } },
+  { studentId: 's13', classId: 'c3', date: '2026-04-30', type: 'monthly', score: 80, maxScore: 100, testName: '4월 월간평가', fields: ['어휘','독해','문학','쓰기'], subScores: { 어휘:20, 독해:20, 문학:20, 쓰기:20 } },
+
   // ── 테스트 선생님 반 성적 ────────────────────────────────────────────────
   // c_t1 영어반 — 2026-03
   { studentId: 's_t1', classId: 'c_t1', date: '2026-03-11', type: 'daily', score: 88, maxScore: 100, testName: '3/11 단어테스트' },
@@ -645,6 +686,17 @@ export const mockTestScores: TestScore[] = [
   { studentId: 's_t4', classId: 'c_t2', date: '2026-04-09', type: 'daily', score: 73, maxScore: 100, testName: '4/9 개념테스트' },
   { studentId: 's_t1', classId: 'c_t2', date: '2026-04-16', type: 'weekly', score: 85, maxScore: 100, testName: '4월 주간테스트', fields: ['개념','연산','응용','서술'], subScores: { 개념:21, 연산:22, 응용:21, 서술:21 } },
   { studentId: 's_t4', classId: 'c_t2', date: '2026-04-16', type: 'weekly', score: 71, maxScore: 100, testName: '4월 주간테스트', fields: ['개념','연산','응용','서술'], subScores: { 개념:18, 연산:18, 응용:18, 서술:17 } },
+  // 테스트 반 월간평가
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-03-31', type: 'monthly', score: 87, maxScore: 100, testName: '3월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:17, 듣기:18, 읽기:18, 쓰기:17, 말하기:17 } },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-03-31', type: 'monthly', score: 72, maxScore: 100, testName: '3월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:14, 듣기:15, 읽기:15, 쓰기:14, 말하기:14 } },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-03-31', type: 'monthly', score: 80, maxScore: 100, testName: '3월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:16, 듣기:16, 읽기:16, 쓰기:16, 말하기:16 } },
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-04-30', type: 'monthly', score: 91, maxScore: 100, testName: '4월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:18, 듣기:18, 읽기:19, 쓰기:18, 말하기:18 } },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-04-30', type: 'monthly', score: 75, maxScore: 100, testName: '4월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:15, 듣기:15, 읽기:15, 쓰기:15, 말하기:15 } },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-04-30', type: 'monthly', score: 83, maxScore: 100, testName: '4월 월간평가', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:17, 듣기:16, 읽기:17, 쓰기:17, 말하기:16 } },
+  { studentId: 's_t1', classId: 'c_t2', date: '2026-03-31', type: 'monthly', score: 83, maxScore: 100, testName: '3월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:21, 연산:21, 응용:21, 서술:20 } },
+  { studentId: 's_t4', classId: 'c_t2', date: '2026-03-31', type: 'monthly', score: 67, maxScore: 100, testName: '3월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:17, 연산:17, 응용:17, 서술:16 } },
+  { studentId: 's_t1', classId: 'c_t2', date: '2026-04-30', type: 'monthly', score: 86, maxScore: 100, testName: '4월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:22, 연산:22, 응용:21, 서술:21 } },
+  { studentId: 's_t4', classId: 'c_t2', date: '2026-04-30', type: 'monthly', score: 72, maxScore: 100, testName: '4월 월간평가', fields: ['개념','연산','응용','서술'], subScores: { 개념:18, 연산:18, 응용:18, 서술:18 } },
 ];
 
 // ─── SCHEDULE EVENTS ──────────────────────────────────────────

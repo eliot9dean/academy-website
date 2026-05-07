@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useSyncExternalStore, useCallback } from 'react';
 import {
   mockUsers, mockStudents, mockClasses, mockAttendance,
   mockDailyProgress, mockHomeworkResults, mockTestScores,
@@ -17,7 +17,7 @@ type Row = Record<string, any>;
 export const DB_LS_KEY      = 'ams_db_tables_v6';
 export const API_TOKEN_KEY  = 'ams_api_token';
 // 더미 데이터가 바뀔 때마다 올려주면 Supabase 강제 재업로드됨
-const SEED_VERSION = 10;
+const SEED_VERSION = 11;
 
 export const DB_INIT: Record<string, Row[]> = {
   users:          mockUsers.map(r => ({ ...r })),
@@ -44,6 +44,17 @@ export const DB_INIT: Record<string, Row[]> = {
 // ─── 모듈 레벨 전역 스토어 ─────────────────────────────────────────────────
 let _db: Record<string, Row[]> | null = null;
 const _listeners = new Set<() => void>();
+
+/**
+ * useSyncExternalStore 구독 함수.
+ * React 18 concurrent mode에서 외부 스토어 변경을 안전하게 구독.
+ * error #300 (Cannot update while rendering)을 원천 방지.
+ */
+function subscribeToStore(onStoreChange: () => void): () => void {
+  _listeners.add(onStoreChange);
+  return () => { _listeners.delete(onStoreChange); };
+}
+
 let _apiSynced = false;   // 이 세션에서 API 동기화가 완료됐는지 여부
 let _realtimeUnsubscribe: (() => void) | null = null; // Supabase Realtime 구독 해제 함수
 let _pollingInterval: ReturnType<typeof setInterval> | null = null; // 폴링 인터벌
@@ -155,24 +166,18 @@ function normalizeDays(data: Record<string, Row[]>): { data: Record<string, Row[
   return changed ? { data: { ...data, classes: fixedClasses }, changed: true } : { data, changed: false };
 }
 
-/** DB 전체를 교체하고 localStorage에 즉시 저장, 모든 구독자에 알림
- *  @param deferred true면 listener 알림을 macrotask로 지연 (비동기 sync 컨텍스트용)
- *                  React 렌더 사이클과의 충돌(error #300) 방지
+/**
+ * DB 전체를 교체하고 localStorage에 즉시 저장, 모든 구독자에 알림.
+ * useSyncExternalStore를 사용하므로 어디서 호출해도 error #300 없음.
  */
-export function writeDB(next: Record<string, Row[]>, deferred = false): void {
+export function writeDB(next: Record<string, Row[]>): void {
   _db = next;
   if (!_isTestMode) { // 테스트 모드: localStorage 저장 건너뜀 → 새로고침 시 Supabase 원본 복원
     try {
       window.localStorage.setItem(DB_LS_KEY, JSON.stringify(next));
     } catch { /* 용량 초과 등 무시 */ }
   }
-  const notify = () => _listeners.forEach(fn => { try { fn(); } catch { /* 무시 */ } });
-  // 비동기 sync 컨텍스트에서 호출 시 macrotask로 지연 → React concurrent render 충돌 방지
-  if (deferred) {
-    setTimeout(notify, 0);
-  } else {
-    notify();
-  }
+  _listeners.forEach(fn => { try { fn(); } catch { /* 무시 */ } });
 }
 
 /** 다른 탭에서 localStorage가 변경될 때 캐시 갱신 (cross-tab sync) */
@@ -197,7 +202,7 @@ async function pollFromSupabase(): Promise<void> {
     const { _seed_version: _sv, ...serverLocal } = serverData;
     const { data: normalized, changed } = normalizeDays(serverLocal);
     if (JSON.stringify(getDB()) !== JSON.stringify(normalized)) {
-      writeDB(normalized, true);
+      writeDB(normalized);
     }
     if (changed) supabaseSaveTable('classes', normalized.classes).catch(() => {});
   } catch { /* 무시 */ }
@@ -246,8 +251,8 @@ export async function syncFromAPI(): Promise<void> {
       const serverSeedVersion = (serverData?._seed_version?.[0] as { v?: number } | undefined)?.v;
 
       if (!serverData || Object.keys(serverData).length === 0) {
-        // 첫 사용: 로컬에 먼저 쓰고(deferred), 업로드는 백그라운드
-        writeDB({ ...DB_INIT }, true);
+        // 첫 사용: 로컬에 먼저 쓰고, 업로드는 백그라운드
+        writeDB({ ...DB_INIT });
         _isSyncing = true;
         const initWithVersion = { ...DB_INIT, _seed_version: [{ v: SEED_VERSION }] };
         uploadAllToSupabase(initWithVersion).finally(() => { _isSyncing = false; });
@@ -265,9 +270,9 @@ export async function syncFromAPI(): Promise<void> {
           merged[table] = [...serverRows, ...toAdd];
         }
         merged._seed_version = [{ v: SEED_VERSION }];
-        // 로컬에 먼저 써서(deferred) 즉시 데이터 보이게 하고, 업로드는 백그라운드
+        // 로컬에 먼저 써서 즉시 데이터 보이게 하고, 업로드는 백그라운드
         const { _seed_version: _, ...mergedLocal } = merged;
-        writeDB(mergedLocal, true);
+        writeDB(mergedLocal);
         _isSyncing = true;
         uploadAllToSupabase(merged).finally(() => { _isSyncing = false; });
 
@@ -275,7 +280,7 @@ export async function syncFromAPI(): Promise<void> {
         // 버전 일치: 서버 데이터 사용 (_seed_version 제외)
         const { _seed_version: _, ...serverLocal } = serverData;
         const { data: normalized, changed } = normalizeDays(serverLocal);
-        writeDB(normalized, true);
+        writeDB(normalized);
         if (changed) supabaseSaveTable('classes', normalized.classes).catch(() => {});
       }
       _apiSynced = true;
@@ -408,19 +413,14 @@ export function resetAPISync(): void {
 // ─── React 훅 ──────────────────────────────────────────────────────────────
 
 /**
- * DB 전체를 읽고 쓰는 훅 (AdminDatabasePage용)
+ * DB 전체를 읽고 쓰는 훅 (AdminDatabasePage용).
+ * useSyncExternalStore 사용 → React 18 concurrent mode에서 error #300 없음.
  */
 export function useDB(): [
   Record<string, Row[]>,
   (updater: Record<string, Row[]> | ((prev: Record<string, Row[]>) => Record<string, Row[]>)) => void
 ] {
-  const [, rerender] = useState(0);
-
-  useEffect(() => {
-    const notify = () => rerender(n => n + 1);
-    _listeners.add(notify);
-    return () => { _listeners.delete(notify); };
-  }, []);
+  const db = useSyncExternalStore(subscribeToStore, getDB, () => DB_INIT);
 
   const setData = useCallback(
     (updater: Record<string, Row[]> | ((prev: Record<string, Row[]>) => Record<string, Row[]>)) => {
@@ -440,24 +440,22 @@ export function useDB(): [
     [],
   );
 
-  return [getDB(), setData];
+  return [db, setData];
 }
 
 /**
- * 특정 테이블의 데이터를 읽고 쓰는 훅
+ * 특정 테이블의 데이터를 읽고 쓰는 훅.
+ * useSyncExternalStore 사용 → React 18 concurrent mode에서 error #300 없음.
+ * 스냅샷은 배열 레퍼런스 비교로 불필요한 리렌더 최소화.
  */
 export function useTableData<T extends Row = Row>(
   tableId: string,
 ): [T[], (updater: T[] | ((prev: T[]) => T[])) => void] {
-  const [, rerender] = useState(0);
-
-  useEffect(() => {
-    const notify = () => rerender(n => n + 1);
-    _listeners.add(notify);
-    return () => { _listeners.delete(notify); };
-  }, []);
-
-  const rows = (getDB()[tableId] ?? []) as T[];
+  const rows = useSyncExternalStore(
+    subscribeToStore,
+    () => (getDB()[tableId] ?? []) as T[],
+    () => (DB_INIT[tableId] ?? []) as T[],
+  );
 
   const setRows = useCallback(
     (updater: T[] | ((prev: T[]) => T[])) => {
