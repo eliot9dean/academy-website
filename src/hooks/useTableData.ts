@@ -17,7 +17,7 @@ type Row = Record<string, any>;
 export const DB_LS_KEY      = 'ams_db_tables_v6';
 export const API_TOKEN_KEY  = 'ams_api_token';
 // 더미 데이터가 바뀔 때마다 올려주면 Supabase 강제 재업로드됨
-const SEED_VERSION = 9;
+const SEED_VERSION = 10;
 
 export const DB_INIT: Record<string, Row[]> = {
   users:          mockUsers.map(r => ({ ...r })),
@@ -155,16 +155,24 @@ function normalizeDays(data: Record<string, Row[]>): { data: Record<string, Row[
   return changed ? { data: { ...data, classes: fixedClasses }, changed: true } : { data, changed: false };
 }
 
-/** DB 전체를 교체하고 localStorage에 즉시 저장, 모든 구독자에 알림 */
-export function writeDB(next: Record<string, Row[]>): void {
+/** DB 전체를 교체하고 localStorage에 즉시 저장, 모든 구독자에 알림
+ *  @param deferred true면 listener 알림을 macrotask로 지연 (비동기 sync 컨텍스트용)
+ *                  React 렌더 사이클과의 충돌(error #300) 방지
+ */
+export function writeDB(next: Record<string, Row[]>, deferred = false): void {
   _db = next;
   if (!_isTestMode) { // 테스트 모드: localStorage 저장 건너뜀 → 새로고침 시 Supabase 원본 복원
     try {
       window.localStorage.setItem(DB_LS_KEY, JSON.stringify(next));
     } catch { /* 용량 초과 등 무시 */ }
   }
-  // 개별 리스너 에러가 다른 컴포넌트 알림을 막지 않도록 try/catch 처리
-  _listeners.forEach(fn => { try { fn(); } catch { /* 무시 */ } });
+  const notify = () => _listeners.forEach(fn => { try { fn(); } catch { /* 무시 */ } });
+  // 비동기 sync 컨텍스트에서 호출 시 macrotask로 지연 → React concurrent render 충돌 방지
+  if (deferred) {
+    setTimeout(notify, 0);
+  } else {
+    notify();
+  }
 }
 
 /** 다른 탭에서 localStorage가 변경될 때 캐시 갱신 (cross-tab sync) */
@@ -189,7 +197,7 @@ async function pollFromSupabase(): Promise<void> {
     const { _seed_version: _sv, ...serverLocal } = serverData;
     const { data: normalized, changed } = normalizeDays(serverLocal);
     if (JSON.stringify(getDB()) !== JSON.stringify(normalized)) {
-      writeDB(normalized);
+      writeDB(normalized, true);
     }
     if (changed) supabaseSaveTable('classes', normalized.classes).catch(() => {});
   } catch { /* 무시 */ }
@@ -238,8 +246,8 @@ export async function syncFromAPI(): Promise<void> {
       const serverSeedVersion = (serverData?._seed_version?.[0] as { v?: number } | undefined)?.v;
 
       if (!serverData || Object.keys(serverData).length === 0) {
-        // 첫 사용: 로컬에 먼저 쓰고, 업로드는 백그라운드
-        writeDB({ ...DB_INIT });
+        // 첫 사용: 로컬에 먼저 쓰고(deferred), 업로드는 백그라운드
+        writeDB({ ...DB_INIT }, true);
         _isSyncing = true;
         const initWithVersion = { ...DB_INIT, _seed_version: [{ v: SEED_VERSION }] };
         uploadAllToSupabase(initWithVersion).finally(() => { _isSyncing = false; });
@@ -247,11 +255,9 @@ export async function syncFromAPI(): Promise<void> {
       } else if (serverSeedVersion !== SEED_VERSION) {
         // 시드 버전 불일치: 사용자 데이터는 보존하고 새 레코드만 추가 (id 기준 병합)
         const merged: Record<string, Row[]> = {};
-        // 서버의 기존 테이블은 모두 가져옴 (사용자 작성 데이터 보존)
         for (const [table, rows] of Object.entries(serverData)) {
           if (table !== '_seed_version') merged[table] = rows;
         }
-        // DB_INIT 테이블에서 서버에 없는 id를 가진 레코드만 추가
         for (const [table, initRows] of Object.entries(DB_INIT)) {
           const serverRows = merged[table] ?? [];
           const serverIds = new Set(serverRows.map((r: Row) => String(r.id ?? '')).filter(Boolean));
@@ -259,9 +265,9 @@ export async function syncFromAPI(): Promise<void> {
           merged[table] = [...serverRows, ...toAdd];
         }
         merged._seed_version = [{ v: SEED_VERSION }];
-        // 로컬에 먼저 써서 즉시 데이터 보이게 하고, 업로드는 백그라운드
+        // 로컬에 먼저 써서(deferred) 즉시 데이터 보이게 하고, 업로드는 백그라운드
         const { _seed_version: _, ...mergedLocal } = merged;
-        writeDB(mergedLocal);
+        writeDB(mergedLocal, true);
         _isSyncing = true;
         uploadAllToSupabase(merged).finally(() => { _isSyncing = false; });
 
@@ -269,8 +275,7 @@ export async function syncFromAPI(): Promise<void> {
         // 버전 일치: 서버 데이터 사용 (_seed_version 제외)
         const { _seed_version: _, ...serverLocal } = serverData;
         const { data: normalized, changed } = normalizeDays(serverLocal);
-        writeDB(normalized);
-        // 정규화가 필요했다면 Supabase에도 즉시 반영 (영구 수정)
+        writeDB(normalized, true);
         if (changed) supabaseSaveTable('classes', normalized.classes).catch(() => {});
       }
       _apiSynced = true;

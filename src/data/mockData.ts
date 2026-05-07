@@ -218,6 +218,45 @@ export const mockAttendance: AttendanceRecord[] = [
   c4('s6','2026-04-10','present'), c4('s15','2026-04-10','present'),
   c4('s6','2026-04-14','present'), c4('s15','2026-04-14','present'),
   c4('s6','2026-04-17','early_leave','가족행사'), c4('s15','2026-04-17','present'),
+
+  // ── 테스트 선생님 반 출석 ──────────────────────────────────────────────────
+  // c_t1 영어반 (월/수/금: s_t1, s_t2, s_t3) — 2026-03
+  makeAtt('c_t1','s_t1','2026-03-02','present'), makeAtt('c_t1','s_t2','2026-03-02','present'), makeAtt('c_t1','s_t3','2026-03-02','present'),
+  makeAtt('c_t1','s_t1','2026-03-04','present'), makeAtt('c_t1','s_t2','2026-03-04','late','버스 지연'), makeAtt('c_t1','s_t3','2026-03-04','present'),
+  makeAtt('c_t1','s_t1','2026-03-06','present'), makeAtt('c_t1','s_t2','2026-03-06','present'), makeAtt('c_t1','s_t3','2026-03-06','absent','감기'),
+  makeAtt('c_t1','s_t1','2026-03-09','present'), makeAtt('c_t1','s_t2','2026-03-09','present'), makeAtt('c_t1','s_t3','2026-03-09','present'),
+  makeAtt('c_t1','s_t1','2026-03-11','late','교통체증'), makeAtt('c_t1','s_t2','2026-03-11','present'), makeAtt('c_t1','s_t3','2026-03-11','present'),
+  makeAtt('c_t1','s_t1','2026-03-13','present'), makeAtt('c_t1','s_t2','2026-03-13','absent','병원'), makeAtt('c_t1','s_t3','2026-03-13','present'),
+  makeAtt('c_t1','s_t1','2026-03-16','present'), makeAtt('c_t1','s_t2','2026-03-16','present'), makeAtt('c_t1','s_t3','2026-03-16','present'),
+  makeAtt('c_t1','s_t1','2026-03-18','present'), makeAtt('c_t1','s_t2','2026-03-18','present'), makeAtt('c_t1','s_t3','2026-03-18','late','지각'),
+  makeAtt('c_t1','s_t1','2026-03-20','present'), makeAtt('c_t1','s_t2','2026-03-20','present'), makeAtt('c_t1','s_t3','2026-03-20','present'),
+  makeAtt('c_t1','s_t1','2026-03-23','present'), makeAtt('c_t1','s_t2','2026-03-23','early_leave','병원'), makeAtt('c_t1','s_t3','2026-03-23','present'),
+  makeAtt('c_t1','s_t1','2026-03-25','present'), makeAtt('c_t1','s_t2','2026-03-25','present'), makeAtt('c_t1','s_t3','2026-03-25','present'),
+  makeAtt('c_t1','s_t1','2026-03-27','present'), makeAtt('c_t1','s_t2','2026-03-27','present'), makeAtt('c_t1','s_t3','2026-03-27','absent','가족행사'),
+  // c_t1 — 2026-04
+  makeAtt('c_t1','s_t1','2026-04-01','present'), makeAtt('c_t1','s_t2','2026-04-01','present'), makeAtt('c_t1','s_t3','2026-04-01','present'),
+  makeAtt('c_t1','s_t1','2026-04-03','present'), makeAtt('c_t1','s_t2','2026-04-03','late','버스'), makeAtt('c_t1','s_t3','2026-04-03','present'),
+  makeAtt('c_t1','s_t1','2026-04-06','present'), makeAtt('c_t1','s_t2','2026-04-06','present'), makeAtt('c_t1','s_t3','2026-04-06','absent','가족행사'),
+  makeAtt('c_t1','s_t1','2026-04-08','absent','감기'), makeAtt('c_t1','s_t2','2026-04-08','present'), makeAtt('c_t1','s_t3','2026-04-08','present'),
+  makeAtt('c_t1','s_t1','2026-04-10','present'), makeAtt('c_t1','s_t2','2026-04-10','early_leave','병원'), makeAtt('c_t1','s_t3','2026-04-10','present'),
+  makeAtt('c_t1','s_t1','2026-04-13','present'), makeAtt('c_t1','s_t2','2026-04-13','present'), makeAtt('c_t1','s_t3','2026-04-13','present'),
+  makeAtt('c_t1','s_t1','2026-04-15','present'), makeAtt('c_t1','s_t2','2026-04-15','present'), makeAtt('c_t1','s_t3','2026-04-15','late','지각'),
+  makeAtt('c_t1','s_t1','2026-04-17','present'), makeAtt('c_t1','s_t2','2026-04-17','present'), makeAtt('c_t1','s_t3','2026-04-17','present'),
+  // c_t2 수학반 (화/목: s_t1, s_t4) — 2026-03
+  makeAtt('c_t2','s_t1','2026-03-03','present'), makeAtt('c_t2','s_t4','2026-03-03','present'),
+  makeAtt('c_t2','s_t1','2026-03-05','present'), makeAtt('c_t2','s_t4','2026-03-05','late','버스 지연'),
+  makeAtt('c_t2','s_t1','2026-03-10','present'), makeAtt('c_t2','s_t4','2026-03-10','present'),
+  makeAtt('c_t2','s_t1','2026-03-12','late','교통체증'), makeAtt('c_t2','s_t4','2026-03-12','present'),
+  makeAtt('c_t2','s_t1','2026-03-17','present'), makeAtt('c_t2','s_t4','2026-03-17','absent','감기'),
+  makeAtt('c_t2','s_t1','2026-03-19','present'), makeAtt('c_t2','s_t4','2026-03-19','present'),
+  makeAtt('c_t2','s_t1','2026-03-24','present'), makeAtt('c_t2','s_t4','2026-03-24','present'),
+  makeAtt('c_t2','s_t1','2026-03-26','present'), makeAtt('c_t2','s_t4','2026-03-26','early_leave','병원'),
+  // c_t2 — 2026-04
+  makeAtt('c_t2','s_t1','2026-04-02','present'), makeAtt('c_t2','s_t4','2026-04-02','present'),
+  makeAtt('c_t2','s_t1','2026-04-07','present'), makeAtt('c_t2','s_t4','2026-04-07','late','지각'),
+  makeAtt('c_t2','s_t1','2026-04-09','absent','감기'), makeAtt('c_t2','s_t4','2026-04-09','present'),
+  makeAtt('c_t2','s_t1','2026-04-14','present'), makeAtt('c_t2','s_t4','2026-04-14','present'),
+  makeAtt('c_t2','s_t1','2026-04-16','present'), makeAtt('c_t2','s_t4','2026-04-16','early_leave','병원'),
 ];
 
 // ─── DAILY PROGRESS ───────────────────────────────────────────
@@ -227,6 +266,14 @@ export const mockDailyProgress: DailyProgress[] = [
   { classId: 'c3', date: '2026-04-14', content: '비문학 독해 전략', homework: '지문 3개 분석 노트 작성', teacherNote: '정현우 해석력 탁월, 임채원 주제 찾기 연습 필요', parentMessage: '비문학 독해 전략을 배웠습니다.' },
   { classId: 'c1', date: '2026-04-11', content: '수동태 문법 집중 학습', homework: 'p.78~80 수동태 변환 연습', teacherNote: '전반적으로 이해도 양호', parentMessage: '오늘 수동태를 배웠습니다.' },
   { classId: 'c1', date: '2026-03-27', content: '관계대명사 who/which/that', homework: '관계대명사 작문 10문장', teacherNote: '강수아 작문 실력 향상 중', parentMessage: '관계대명사를 공부했습니다. 작문 과제 확인 부탁드립니다.' },
+  // ── 테스트 반 수업 일지 ──────────────────────────────────────────────────
+  { classId: 'c_t1', date: '2026-04-13', content: 'Unit 5 현재완료 문법 집중 학습', homework: 'p.60~63 연습문제 풀기', teacherNote: '테스트학생1 집중도 우수, 테스트학생2 문법 복습 필요', parentMessage: '현재완료 문법을 배웠습니다. 숙제 확인 부탁드립니다.' },
+  { classId: 'c_t1', date: '2026-04-08', content: '수동태 문법 학습 및 작문 연습', homework: 'p.55~58 수동태 변환 연습', teacherNote: '전반적 이해도 양호, 테스트학생3 추가 연습 필요', parentMessage: '수동태 문법을 배웠습니다.' },
+  { classId: 'c_t1', date: '2026-04-01', content: '관계대명사 심화 학습', homework: '관계대명사 작문 8문장', teacherNote: '테스트학생1 작문 실력 빠르게 향상 중', parentMessage: '관계대명사 심화 내용을 배웠습니다. 작문 과제 확인 부탁드립니다.' },
+  { classId: 'c_t1', date: '2026-03-25', content: '단어 Unit 6 학습 및 받아쓰기', homework: 'Unit 6 단어 암기 (30개)', teacherNote: '세 학생 모두 단어 암기 성실히 준비함', parentMessage: '단어 테스트를 진행했습니다. 추가 복습 부탁드립니다.' },
+  { classId: 'c_t2', date: '2026-04-14', content: '이차방정식 근의 공식 학습', homework: '교재 p.88~92 문제 풀기', teacherNote: '테스트학생1 이해도 높음, 테스트학생4 근의 공식 추가 연습 필요', parentMessage: '근의 공식을 학습했습니다. 복습 부탁드립니다.' },
+  { classId: 'c_t2', date: '2026-04-09', content: '이차방정식 인수분해 풀이', homework: 'p.80~84 인수분해 문제', teacherNote: '전반적으로 집중도 높았음', parentMessage: '인수분해를 배웠습니다.' },
+  { classId: 'c_t2', date: '2026-03-26', content: '이차방정식 기본 개념 정리', homework: 'p.68~72 개념 문제 풀기', teacherNote: '테스트학생4 서술형 답 쓰기 연습 필요', parentMessage: '이차방정식 기본을 배웠습니다.' },
 ];
 
 // ─── HOMEWORK RESULTS ─────────────────────────────────────────
@@ -256,6 +303,20 @@ export const mockHomeworkResults: HomeworkResult[] = [
   { studentId: 's9',  classId: 'c1', date: '2026-03-27', result: 'poor' },
   { studentId: 's11', classId: 'c1', date: '2026-03-27', result: 'good' },
   { studentId: 's15', classId: 'c1', date: '2026-03-27', result: 'excellent' },
+  // ── 테스트 반 숙제 결과 ──────────────────────────────────────────────────
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-04-13', result: 'excellent' },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-04-13', result: 'good' },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-04-13', result: 'not_submitted' },
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-04-08', result: 'excellent' },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-04-08', result: 'poor' },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-04-08', result: 'good' },
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-04-01', result: 'excellent' },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-04-01', result: 'excellent' },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-04-01', result: 'good' },
+  { studentId: 's_t1', classId: 'c_t2', date: '2026-04-14', result: 'excellent' },
+  { studentId: 's_t4', classId: 'c_t2', date: '2026-04-14', result: 'good' },
+  { studentId: 's_t1', classId: 'c_t2', date: '2026-04-09', result: 'excellent' },
+  { studentId: 's_t4', classId: 'c_t2', date: '2026-04-09', result: 'not_submitted' },
 ];
 
 // ─── TEST SCORES ──────────────────────────────────────────────
@@ -551,6 +612,39 @@ export const mockTestScores: TestScore[] = [
   // 04-17 (금) 개념테스트 4단원 복습
   { studentId: 's6',  classId: 'c4', date: '2026-04-17', type: 'daily', score: 93, maxScore: 100, testName: '4/17 개념테스트' },
   { studentId: 's15', classId: 'c4', date: '2026-04-17', type: 'daily', score: 88, maxScore: 100, testName: '4/17 개념테스트' },
+
+  // ── 테스트 선생님 반 성적 ────────────────────────────────────────────────
+  // c_t1 영어반 — 2026-03
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-03-11', type: 'daily', score: 88, maxScore: 100, testName: '3/11 단어테스트' },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-03-11', type: 'daily', score: 72, maxScore: 100, testName: '3/11 단어테스트' },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-03-11', type: 'daily', score: 80, maxScore: 100, testName: '3/11 단어테스트' },
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-03-20', type: 'daily', score: 90, maxScore: 100, testName: '3/20 문법퀴즈' },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-03-20', type: 'daily', score: 74, maxScore: 100, testName: '3/20 문법퀴즈' },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-03-20', type: 'daily', score: 82, maxScore: 100, testName: '3/20 문법퀴즈' },
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-03-27', type: 'weekly', score: 86, maxScore: 100, testName: '3월 4주 주간테스트', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:17, 듣기:17, 읽기:18, 쓰기:17, 말하기:17 } },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-03-27', type: 'weekly', score: 71, maxScore: 100, testName: '3월 4주 주간테스트', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:14, 듣기:14, 읽기:15, 쓰기:14, 말하기:14 } },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-03-27', type: 'weekly', score: 79, maxScore: 100, testName: '3월 4주 주간테스트', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:16, 듣기:15, 읽기:16, 쓰기:16, 말하기:16 } },
+  // c_t1 — 2026-04
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-04-06', type: 'daily', score: 91, maxScore: 100, testName: '4/6 단어테스트' },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-04-06', type: 'daily', score: 75, maxScore: 100, testName: '4/6 단어테스트' },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-04-06', type: 'daily', score: 83, maxScore: 100, testName: '4/6 단어테스트' },
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-04-13', type: 'daily', score: 93, maxScore: 100, testName: '4/13 문법퀴즈' },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-04-13', type: 'daily', score: 78, maxScore: 100, testName: '4/13 문법퀴즈' },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-04-13', type: 'daily', score: 85, maxScore: 100, testName: '4/13 문법퀴즈' },
+  { studentId: 's_t1', classId: 'c_t1', date: '2026-04-17', type: 'weekly', score: 90, maxScore: 100, testName: '4월 주간테스트', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:18, 듣기:18, 읽기:18, 쓰기:18, 말하기:18 } },
+  { studentId: 's_t2', classId: 'c_t1', date: '2026-04-17', type: 'weekly', score: 74, maxScore: 100, testName: '4월 주간테스트', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:15, 듣기:14, 읽기:15, 쓰기:15, 말하기:15 } },
+  { studentId: 's_t3', classId: 'c_t1', date: '2026-04-17', type: 'weekly', score: 82, maxScore: 100, testName: '4월 주간테스트', fields: ['단어','듣기','읽기','쓰기','말하기'], subScores: { 단어:16, 듣기:16, 읽기:17, 쓰기:17, 말하기:16 } },
+  // c_t2 수학반 — 2026-03~04
+  { studentId: 's_t1', classId: 'c_t2', date: '2026-03-12', type: 'daily', score: 82, maxScore: 100, testName: '3/12 계산테스트' },
+  { studentId: 's_t4', classId: 'c_t2', date: '2026-03-12', type: 'daily', score: 68, maxScore: 100, testName: '3/12 계산테스트' },
+  { studentId: 's_t1', classId: 'c_t2', date: '2026-03-19', type: 'daily', score: 85, maxScore: 100, testName: '3/19 개념테스트' },
+  { studentId: 's_t4', classId: 'c_t2', date: '2026-03-19', type: 'daily', score: 70, maxScore: 100, testName: '3/19 개념테스트' },
+  { studentId: 's_t1', classId: 'c_t2', date: '2026-03-26', type: 'weekly', score: 81, maxScore: 100, testName: '3월 4주 주간테스트', fields: ['개념','연산','응용','서술'], subScores: { 개념:21, 연산:20, 응용:20, 서술:20 } },
+  { studentId: 's_t4', classId: 'c_t2', date: '2026-03-26', type: 'weekly', score: 66, maxScore: 100, testName: '3월 4주 주간테스트', fields: ['개념','연산','응용','서술'], subScores: { 개념:17, 연산:17, 응용:16, 서술:16 } },
+  { studentId: 's_t1', classId: 'c_t2', date: '2026-04-09', type: 'daily', score: 87, maxScore: 100, testName: '4/9 개념테스트' },
+  { studentId: 's_t4', classId: 'c_t2', date: '2026-04-09', type: 'daily', score: 73, maxScore: 100, testName: '4/9 개념테스트' },
+  { studentId: 's_t1', classId: 'c_t2', date: '2026-04-16', type: 'weekly', score: 85, maxScore: 100, testName: '4월 주간테스트', fields: ['개념','연산','응용','서술'], subScores: { 개념:21, 연산:22, 응용:21, 서술:21 } },
+  { studentId: 's_t4', classId: 'c_t2', date: '2026-04-16', type: 'weekly', score: 71, maxScore: 100, testName: '4월 주간테스트', fields: ['개념','연산','응용','서술'], subScores: { 개념:18, 연산:18, 응용:18, 서술:17 } },
 ];
 
 // ─── SCHEDULE EVENTS ──────────────────────────────────────────
@@ -690,6 +784,17 @@ export const mockDailyReports: DailyReportStatus[] = [
   { classId: 'c3', date: '2026-04-14', studentId: 's13', sent: true,  sentAt: '21:07', parentPhone: '010-3344-5566' },
   { classId: 'c4', date: '2026-04-15', studentId: 's6',  sent: true,  sentAt: '19:35', parentPhone: '010-6666-7777' },
   { classId: 'c4', date: '2026-04-15', studentId: 's15', sent: false, parentPhone: '010-5566-7788', note: '발송 대기' },
+  // ── 테스트 반 알림장 ──────────────────────────────────────────────────
+  { classId: 'c_t1', date: '2026-04-13', studentId: 's_t1', sent: true,  sentAt: '17:40', parentPhone: '010-0000-0010' },
+  { classId: 'c_t1', date: '2026-04-13', studentId: 's_t2', sent: true,  sentAt: '17:41', parentPhone: '010-0000-0010' },
+  { classId: 'c_t1', date: '2026-04-13', studentId: 's_t3', sent: false, parentPhone: '010-0000-0020', note: '발송 대기' },
+  { classId: 'c_t1', date: '2026-04-08', studentId: 's_t1', sent: true,  sentAt: '17:35', parentPhone: '010-0000-0010' },
+  { classId: 'c_t1', date: '2026-04-08', studentId: 's_t2', sent: true,  sentAt: '17:36', parentPhone: '010-0000-0010' },
+  { classId: 'c_t1', date: '2026-04-08', studentId: 's_t3', sent: true,  sentAt: '17:37', parentPhone: '010-0000-0020' },
+  { classId: 'c_t2', date: '2026-04-14', studentId: 's_t1', sent: true,  sentAt: '19:05', parentPhone: '010-0000-0010' },
+  { classId: 'c_t2', date: '2026-04-14', studentId: 's_t4', sent: true,  sentAt: '19:06', parentPhone: '010-0000-0010' },
+  { classId: 'c_t2', date: '2026-04-09', studentId: 's_t1', sent: false, parentPhone: '010-0000-0010', note: '결석 — 미발송' },
+  { classId: 'c_t2', date: '2026-04-09', studentId: 's_t4', sent: true,  sentAt: '19:08', parentPhone: '010-0000-0010' },
 ];
 
 // ─── ENROLLMENT MGMT (수강관리 DB) ────────────────────────────
@@ -963,6 +1068,28 @@ export const mockEnrollmentMgmt: EnrollmentMgmt[] = [
 
   // ─── 2024년 이력 ─────────────────────────────────────────────
   ...em2024,
+
+  // ─── 테스트 학생 수강관리 ─────────────────────────────────────
+  // s_t1 테스트학생1 — c_t1 영어반 (300,000/월)
+  mkEM('et001','s_t1','c_t1','2026-03-01',null,'2026-03',300000,'2026-04-01',true,'2026-03-28'),
+  mkEM('et002','s_t1','c_t1','2026-03-01',null,'2026-04',300000,'2026-05-01',true,'2026-04-28'),
+  mkEM('et003','s_t1','c_t1','2026-03-01',null,'2026-05',300000,'2026-06-01',false),
+  // s_t1 테스트학생1 — c_t2 수학반 (310,000/월)
+  mkEM('et004','s_t1','c_t2','2026-03-01',null,'2026-03',310000,'2026-04-01',true,'2026-03-29'),
+  mkEM('et005','s_t1','c_t2','2026-03-01',null,'2026-04',310000,'2026-05-01',true,'2026-04-29'),
+  mkEM('et006','s_t1','c_t2','2026-03-01',null,'2026-05',310000,'2026-06-01',false),
+  // s_t2 테스트학생2 — c_t1 영어반 (미납 있음)
+  mkEM('et007','s_t2','c_t1','2026-03-01',null,'2026-03',300000,'2026-04-01',true,'2026-03-30'),
+  mkEM('et008','s_t2','c_t1','2026-03-01',null,'2026-04',300000,'2026-04-25',false,undefined,undefined,'납부 요청 문자 발송 완료'),
+  mkEM('et009','s_t2','c_t1','2026-03-01',null,'2026-05',300000,'2026-06-01',false),
+  // s_t3 테스트학생3 — c_t1 영어반
+  mkEM('et010','s_t3','c_t1','2026-03-01',null,'2026-03',300000,'2026-04-01',true,'2026-03-29'),
+  mkEM('et011','s_t3','c_t1','2026-03-01',null,'2026-04',300000,'2026-05-01',true,'2026-04-28'),
+  mkEM('et012','s_t3','c_t1','2026-03-01',null,'2026-05',300000,'2026-06-01',false),
+  // s_t4 테스트학생4 — c_t2 수학반
+  mkEM('et013','s_t4','c_t2','2026-03-01',null,'2026-03',310000,'2026-04-01',true,'2026-03-28'),
+  mkEM('et014','s_t4','c_t2','2026-03-01',null,'2026-04',310000,'2026-05-01',true,'2026-04-27'),
+  mkEM('et015','s_t4','c_t2','2026-03-01',null,'2026-05',310000,'2026-06-01',false),
 ];
 
 // ─── CLASS HISTORY ────────────────────────────────────────────
@@ -1029,6 +1156,14 @@ export const mockObservations: ObservationRecord[] = [
   // c4 중1 수학 D반 — s6 강수아
   { id: 'ob08', classId: 'c4', studentId: 's6', date: '2026-04-08', note: '방정식 풀이 과정에서 실수가 잦음. 풀이 단계를 꼼꼼히 쓰도록 지도함.', parentNote: '수학 오답노트 작성을 권장합니다.' },
   { id: 'ob09', classId: 'c4', studentId: 's15', date: '2026-04-15', note: '개념 이해도가 높아짐. 응용 문제도 도전해보도록 격려함.', parentNote: '심화 문제집을 병행하면 좋겠습니다.' },
+  // ── 테스트 반 관찰 기록 ──────────────────────────────────────────────────
+  { id: 'ob_t1', classId: 'c_t1', studentId: 's_t1', date: '2026-04-13', note: '수업 집중도가 매우 높고 발표 참여도 우수. 단어 암기 속도가 빠름.', parentNote: '단어장을 이용해 추가 복습하면 좋겠습니다.' },
+  { id: 'ob_t2', classId: 'c_t1', studentId: 's_t2', date: '2026-04-13', note: '문법 이해는 양호하나 쓰기 연습이 더 필요함. 작문 과제 꾸준히 지도 중.', parentNote: '교재 쓰기 파트를 추가로 연습시켜 주세요.' },
+  { id: 'ob_t3', classId: 'c_t1', studentId: 's_t3', date: '2026-04-10', note: '지난 결석 후 복습이 잘 됨. 내용을 잘 따라오고 있음.', parentNote: '결석분 보충이 잘 됐습니다. 계속 응원 부탁드립니다.' },
+  { id: 'ob_t4', classId: 'c_t1', studentId: 's_t1', date: '2026-04-01', note: '발표 활동에서 자신감 있게 참여함. 리더십도 보임.', parentNote: '' },
+  { id: 'ob_t5', classId: 'c_t2', studentId: 's_t1', date: '2026-04-16', note: '이차방정식 근의 공식 적용이 매우 정확함. 응용 문제도 도전하도록 격려함.', parentNote: '심화 문제집을 병행하면 좋겠습니다.' },
+  { id: 'ob_t6', classId: 'c_t2', studentId: 's_t4', date: '2026-04-16', note: '계산 실수가 줄어들고 있음. 서술형 문제 연습이 더 필요함.', parentNote: '서술형 답안 작성 연습을 집에서도 해주세요.' },
+  { id: 'ob_t7', classId: 'c_t2', studentId: 's_t4', date: '2026-04-07', note: '지각했지만 수업 태도는 성실함. 교통편 문제 확인 필요.', parentNote: '등원 시간에 여유를 두고 출발해 주세요.' },
 ];
 
 // ─── TEXTBOOKS ────────────────────────────────────────────────
