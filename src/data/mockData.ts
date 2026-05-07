@@ -16,6 +16,7 @@ export const mockUsers: User[] = [
   // ── 테스트 계정 (isTestAccount: true — DB에 쓰기 차단) ──────────────────
   { id: 'u_ta', name: '테스트관리자', role: 'admin',   email: 'test.admin@test.com',   isTestAccount: true, joinDate: '2020-01-01' },
   { id: 'u_tt', name: '테스트선생님', role: 'teacher', email: 'test.teacher@test.com', isTestAccount: true, joinDate: '2020-01-01' },
+  { id: 'u_ts', name: '테스트스탭',   role: 'staff',   email: 'test.staff@test.com',   isTestAccount: true, joinDate: '2020-01-01' },
   { id: 'u_tp', name: '테스트학부모', role: 'parent',  email: 'test.parent@test.com',  isTestAccount: true },
 ];
 

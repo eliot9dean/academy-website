@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useNavigate, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Navigate, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { API_ENABLED } from '../config/api';
 import { changePasswordAPI } from '../hooks/useTableData';
@@ -176,7 +176,7 @@ export default function Layout() {
   const [collapsed,   setCollapsed]   = useState(false);
   const [showPwModal, setShowPwModal] = useState(false);
 
-  if (!currentUser) { navigate('/'); return null; }
+  if (!currentUser) return <Navigate to="/" replace />;
 
   // 관리자가 다른 역할로 보기 중이면 해당 역할 기준으로 표시
   const displayUser = viewAsUser ?? currentUser;

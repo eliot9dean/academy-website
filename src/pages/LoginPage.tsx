@@ -252,9 +252,10 @@ function DemoLoginForm() {
 
 // ─── 테스트 모드 역할 선택 모달 ────────────────────────────────────────────
 const TEST_ROLES: { userId: string; role: UserRole; label: string; icon: string; color: string }[] = [
-  { userId: 'u_ta', role: 'admin',   label: '관리자 (학원장)', icon: '👑', color: 'bg-purple-50 border-purple-200 hover:bg-purple-100' },
-  { userId: 'u_tt', role: 'teacher', label: '선생님',          icon: '📚', color: 'bg-blue-50 border-blue-200 hover:bg-blue-100'   },
-  { userId: 'u_tp', role: 'parent',  label: '학부모',          icon: '👨‍👩‍👧', color: 'bg-orange-50 border-orange-200 hover:bg-orange-100' },
+  { userId: 'u_ta', role: 'admin',   label: '관리자 (학원장)',      icon: '👑',      color: 'bg-purple-50 border-purple-200 hover:bg-purple-100' },
+  { userId: 'u_tt', role: 'teacher', label: '선생님',               icon: '📚',      color: 'bg-blue-50 border-blue-200 hover:bg-blue-100'       },
+  { userId: 'u_ts', role: 'staff',   label: '스탭 (데스크/부원장)', icon: '🖥️',      color: 'bg-green-50 border-green-200 hover:bg-green-100'    },
+  { userId: 'u_tp', role: 'parent',  label: '학부모',               icon: '👨‍👩‍👧', color: 'bg-orange-50 border-orange-200 hover:bg-orange-100'  },
 ];
 
 function TestModeModal({ onClose }: { onClose: () => void }) {
