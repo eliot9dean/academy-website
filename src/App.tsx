@@ -1,5 +1,6 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import LoginPage from './pages/LoginPage';
 import SetPasswordPage from './pages/SetPasswordPage';
 import Layout from './components/Layout';
@@ -30,7 +31,9 @@ import StaffTextbookPage from './pages/staff/StaffTextbookPage';
 import ParentDashboardPage from './pages/parent/ParentDashboardPage';
 
 function AppRoutes() {
+  const location = useLocation();
   return (
+    <ErrorBoundary resetKey={location.pathname}>
     <Routes>
           <Route path="/" element={<LoginPage />} />
           {/* 비밀번호 재설정 링크 전용 페이지 */}
@@ -75,6 +78,7 @@ function AppRoutes() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+    </ErrorBoundary>
   );
 }
 
