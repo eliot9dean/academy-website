@@ -55,6 +55,17 @@ function subscribeToStore(onStoreChange: () => void): () => void {
   return () => { _listeners.delete(onStoreChange); };
 }
 
+/**
+ * DB에 없는 tableId(예: 'pending_users')에 대해 안정적인 빈 배열 참조를 반환.
+ * useSyncExternalStore의 getSnapshot은 동일 tableId에 대해 항상 같은 참조를
+ * 반환해야 한다. 새 [] 를 매번 생성하면 error #185 (무한 루프) 발생.
+ */
+const _stableEmpty = new Map<string, unknown[]>();
+function getStableEmpty<T>(tableId: string): T[] {
+  if (!_stableEmpty.has(tableId)) _stableEmpty.set(tableId, []);
+  return _stableEmpty.get(tableId) as T[];
+}
+
 let _apiSynced = false;   // 이 세션에서 API 동기화가 완료됐는지 여부
 let _realtimeUnsubscribe: (() => void) | null = null; // Supabase Realtime 구독 해제 함수
 let _pollingInterval: ReturnType<typeof setInterval> | null = null; // 폴링 인터벌
@@ -453,8 +464,10 @@ export function useTableData<T extends Row = Row>(
 ): [T[], (updater: T[] | ((prev: T[]) => T[])) => void] {
   const rows = useSyncExternalStore(
     subscribeToStore,
-    () => (getDB()[tableId] ?? []) as T[],
-    () => (DB_INIT[tableId] ?? []) as T[],
+    // getSnapshot: DB에 없는 tableId는 안정적 빈 배열 반환 (error #185 방지)
+    () => { const v = getDB()[tableId]; return v !== undefined ? v as T[] : getStableEmpty<T>(tableId); },
+    // getServerSnapshot (SSR 미사용이지만 필수)
+    () => { const v = DB_INIT[tableId]; return v !== undefined ? v as T[] : getStableEmpty<T>(tableId); },
   );
 
   const setRows = useCallback(
