@@ -11,6 +11,8 @@ export interface User {
   address?: string;
   joinDate?: string;
   resignDate?: string;
+  /** true이면 테스트 모드 — 모든 쓰기가 DB에 반영되지 않음 */
+  isTestAccount?: boolean;
 }
 
 export interface Student {

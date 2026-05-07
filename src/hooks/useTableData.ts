@@ -49,6 +49,23 @@ let _realtimeUnsubscribe: (() => void) | null = null; // Supabase Realtime 구�
 let _pollingInterval: ReturnType<typeof setInterval> | null = null; // 폴링 인터벌
 let _lastUserWrite = 0; // 사용자가 마지막으로 데이터를 저장한 타임스탬프
 
+// ─── 테스트 모드 ────────────────────────────────────────────────────────────
+/** true이면 모든 쓰기(localStorage + Supabase)를 차단, 메모리에만 반영 */
+let _isTestMode = false;
+
+/**
+ * 테스트 모드 활성화/비활성화.
+ * true 시: localStorage 캐시를 삭제해 새로고침 시 Supabase 원본 데이터로 복원.
+ */
+export function setTestMode(isTest: boolean): void {
+  _isTestMode = isTest;
+  if (isTest) {
+    try { window.localStorage.removeItem(DB_LS_KEY); } catch { /* 무시 */ }
+  }
+}
+
+export function getTestMode(): boolean { return _isTestMode; }
+
 /** localStorage에서 DB를 읽어 캐시 초기화 (최초 1회) */
 function initDB(): Record<string, Row[]> {
   if (_db !== null) return _db;
@@ -140,9 +157,11 @@ function normalizeDays(data: Record<string, Row[]>): { data: Record<string, Row[
 /** DB 전체를 교체하고 localStorage에 즉시 저장, 모든 구독자에 알림 */
 export function writeDB(next: Record<string, Row[]>): void {
   _db = next;
-  try {
-    window.localStorage.setItem(DB_LS_KEY, JSON.stringify(next));
-  } catch { /* 용량 초과 등 무시 */ }
+  if (!_isTestMode) { // 테스트 모드: localStorage 저장 건너뜀 → 새로고침 시 Supabase 원본 복원
+    try {
+      window.localStorage.setItem(DB_LS_KEY, JSON.stringify(next));
+    } catch { /* 용량 초과 등 무시 */ }
+  }
   _listeners.forEach(fn => fn());
 }
 
@@ -321,6 +340,8 @@ async function uploadAllToSupabase(db: Record<string, Row[]>): Promise<void> {
  * 실패해도 로컬 데이터는 이미 저장됐으므로 무시.
  */
 async function saveTableToAPI(tableName: string, rows: Row[]): Promise<void> {
+  // 테스트 모드: 서버 저장 완전 차단
+  if (_isTestMode) return;
   // Supabase 모드
   if (SUPABASE_ENABLED) {
     try {

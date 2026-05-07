@@ -4,7 +4,7 @@ import { mockUsers } from '../data/mockData';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { API_URL, API_ENABLED, SUPABASE_ENABLED } from '../config/api';
 import {
-  setApiToken, clearApiToken, syncFromAPI, resetAPISync, getApiToken,
+  setApiToken, clearApiToken, syncFromAPI, resetAPISync, getApiToken, setTestMode,
 } from '../hooks/useTableData';
 import {
   supabaseLogin, supabaseLogout, supabaseGetCurrentUser, supabase,
@@ -23,6 +23,8 @@ interface AuthContextType {
   /** API/Supabase 모드 로그인 (이메일 + 비밀번호) */
   loginWithAPI: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
+  /** 현재 테스트 모드 여부 (모든 쓰기가 DB에 반영되지 않음) */
+  isTestMode: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -31,6 +33,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('ams_auth_user', null);
   const [viewAsUser, setViewAsUser] = useState<User | null>(null);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [isTestMode, setIsTestMode] = useState(false);
+
+  /** 테스트 모드 활성화 헬퍼 (React state + 모듈 플래그 동시 설정) */
+  const applyTestMode = React.useCallback((isTest: boolean) => {
+    setIsTestMode(isTest);
+    setTestMode(isTest);
+  }, []);
 
   // ── 앱 시작 시: 기존 세션 복원 + 비밀번호 복구 감지 ────────────────────
   useEffect(() => {
@@ -47,7 +56,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 기존 세션 복원 + 항상 Supabase 동기화 (데모 모드 포함)
       supabaseGetCurrentUser().then(user => {
-        if (user) setCurrentUser(user);
+        if (user) {
+          setCurrentUser(user);
+          applyTestMode(user.isTestAccount ?? false); // 테스트 계정 복원 시 모드 재적용
+        }
         syncFromAPI().catch(() => {}); // 세션 유무와 무관하게 항상 동기화
       });
 
@@ -62,7 +74,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── 데모 모드 로그인 ──────────────────────────────────────────────────────
   const login = (role: UserRole, userId: string) => {
     const user = mockUsers.find(u => u.id === userId && u.role === role);
-    if (user) setCurrentUser(user);
+    if (user) {
+      setCurrentUser(user);
+      applyTestMode(user.isTestAccount ?? false);
+    }
   };
 
   // ── API/Supabase 모드 로그인 ──────────────────────────────────────────────
@@ -77,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: false, error: result.error ?? '로그인 실패' };
       }
       setCurrentUser(result.user);
+      applyTestMode(result.user.isTestAccount ?? false); // 테스트 계정 여부 적용
       resetAPISync();
       syncFromAPI().catch(() => {});
       return { ok: true };
@@ -120,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ── 로그아웃 ──────────────────────────────────────────────────────────────
   const logout = () => {
+    applyTestMode(false); // 테스트 모드 해제
     setCurrentUser(null);
     if (SUPABASE_ENABLED) {
       supabaseLogout().catch(() => {});
@@ -129,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, viewAsUser, setViewAsUser, isPasswordRecovery, setIsPasswordRecovery, login, loginWithAPI, logout }}>
+    <AuthContext.Provider value={{ currentUser, viewAsUser, setViewAsUser, isPasswordRecovery, setIsPasswordRecovery, login, loginWithAPI, logout, isTestMode }}>
       {children}
     </AuthContext.Provider>
   );

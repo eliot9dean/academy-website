@@ -170,7 +170,7 @@ function ChangePasswordModal({ onClose, currentEmail }: { onClose: () => void; c
 
 // ─── 메인 레이아웃 ─────────────────────────────────────────────────────────
 export default function Layout() {
-  const { currentUser, viewAsUser, setViewAsUser, logout } = useAuth();
+  const { currentUser, viewAsUser, setViewAsUser, logout, isTestMode } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
   const [collapsed,   setCollapsed]   = useState(false);
@@ -386,13 +386,23 @@ export default function Layout() {
           <span className="text-sm font-semibold" style={{ color: '#334155' }}>
             {activeItem?.label ?? '학원관리 시스템'}
           </span>
-          <div className="ml-auto flex items-center gap-1.5 text-xs" style={{ color: '#94A3B8' }}>
-            <span>📅</span>
-            <span>
-              {new Date().toLocaleDateString('ko-KR', {
-                year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
-              })}
-            </span>
+          <div className="ml-auto flex items-center gap-3">
+            {isTestMode && (
+              <div
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold"
+                style={{ background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}
+              >
+                🧪 테스트 모드 — 변경사항이 저장되지 않습니다
+              </div>
+            )}
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: '#94A3B8' }}>
+              <span>📅</span>
+              <span>
+                {new Date().toLocaleDateString('ko-KR', {
+                  year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+                })}
+              </span>
+            </div>
           </div>
         </header>
 

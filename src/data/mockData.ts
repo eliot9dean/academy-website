@@ -13,6 +13,10 @@ export const mockUsers: User[] = [
   { id: 'u4', name: '최지혜', role: 'teacher', email: 'teacher3@academy.com', phone: '010-4567-8901', ssn: '901224-2567890', address: '경기도 성남시 분당구 정자동 456-78 정자아이파크 102동 504호',    joinDate: '2022-09-01' },
   { id: 'u5', name: '정서연', role: 'staff',   email: 'staff@academy.com',    phone: '010-5678-9012', ssn: '950315-2678901', address: '서울시 마포구 합정동 567-89 합정메세나폴리스 A동 1203호',        joinDate: '2023-01-02' },
   { id: 'u6', name: '김학부', role: 'parent',  email: 'parent1@gmail.com',    phone: '010-6789-0123', ssn: '780430-1789012', address: '경기도 용인시 수지구 풍덕천동 678-90 수지현대아파트 201동 1105호' },
+  // ── 테스트 계정 (isTestAccount: true — DB에 쓰기 차단) ──────────────────
+  { id: 'u_ta', name: '테스트관리자', role: 'admin',   email: 'test.admin@test.com',   isTestAccount: true, joinDate: '2020-01-01' },
+  { id: 'u_tt', name: '테스트선생님', role: 'teacher', email: 'test.teacher@test.com', isTestAccount: true, joinDate: '2020-01-01' },
+  { id: 'u_tp', name: '테스트학부모', role: 'parent',  email: 'test.parent@test.com',  isTestAccount: true },
 ];
 
 // ─── STUDENTS ─────────────────────────────────────────────────
