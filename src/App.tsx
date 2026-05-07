@@ -84,10 +84,13 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <HashRouter>
-        <AppRoutes />
-      </HashRouter>
-    </AuthProvider>
+    // 최상위 ErrorBoundary: AuthProvider·HashRouter 레벨 에러까지 커버
+    <ErrorBoundary>
+      <AuthProvider>
+        <HashRouter>
+          <AppRoutes />
+        </HashRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

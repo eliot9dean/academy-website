@@ -162,7 +162,8 @@ export function writeDB(next: Record<string, Row[]>): void {
       window.localStorage.setItem(DB_LS_KEY, JSON.stringify(next));
     } catch { /* 용량 초과 등 무시 */ }
   }
-  _listeners.forEach(fn => fn());
+  // 개별 리스너 에러가 다른 컴포넌트 알림을 막지 않도록 try/catch 처리
+  _listeners.forEach(fn => { try { fn(); } catch { /* 무시 */ } });
 }
 
 /** 다른 탭에서 localStorage가 변경될 때 캐시 갱신 (cross-tab sync) */
