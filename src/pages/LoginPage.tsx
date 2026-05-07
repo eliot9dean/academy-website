@@ -250,8 +250,80 @@ function DemoLoginForm() {
   );
 }
 
+// ─── 테스트 모드 역할 선택 모달 ────────────────────────────────────────────
+const TEST_ROLES: { userId: string; role: UserRole; label: string; icon: string; color: string }[] = [
+  { userId: 'u_ta', role: 'admin',   label: '관리자 (학원장)', icon: '👑', color: 'bg-purple-50 border-purple-200 hover:bg-purple-100' },
+  { userId: 'u_tt', role: 'teacher', label: '선생님',          icon: '📚', color: 'bg-blue-50 border-blue-200 hover:bg-blue-100'   },
+  { userId: 'u_tp', role: 'parent',  label: '학부모',          icon: '👨‍👩‍👧', color: 'bg-orange-50 border-orange-200 hover:bg-orange-100' },
+];
+
+function TestModeModal({ onClose }: { onClose: () => void }) {
+  const { login } = useAuth();
+  const navigate  = useNavigate();
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const handleLogin = () => {
+    const t = TEST_ROLES.find(r => r.userId === selected);
+    if (!t) return;
+    login(t.role, t.userId);
+    onClose();
+    navigate(ROLE_PATH[t.role]);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.45)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+        {/* 헤더 */}
+        <div className="px-5 pt-5 pb-3">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-base font-bold text-gray-800">🧪 테스트 모드 체험</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+          </div>
+          <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+            변경사항이 실제 DB에 저장되지 않습니다.<br/>
+            새로고침하면 원래 데이터로 복원됩니다.
+          </p>
+        </div>
+
+        {/* 역할 선택 */}
+        <div className="px-5 pb-2 space-y-2">
+          {TEST_ROLES.map(r => (
+            <button
+              key={r.userId}
+              onClick={() => setSelected(r.userId)}
+              className={`w-full flex items-center gap-3 p-3 border-2 rounded-xl text-left transition-all ${r.color} ${
+                selected === r.userId ? 'ring-2 ring-amber-400 ring-offset-1' : ''
+              }`}
+            >
+              <span className="text-2xl">{r.icon}</span>
+              <span className="font-semibold text-gray-800 text-sm">{r.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* 확인 버튼 */}
+        <div className="px-5 pb-5 pt-3">
+          <button
+            onClick={handleLogin}
+            disabled={!selected}
+            className="w-full py-2.5 bg-amber-500 text-white rounded-xl font-semibold text-sm hover:bg-amber-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            테스트 모드로 입장
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── 메인 로그인 페이지 ───────────────────────────────────────────────────
 export default function LoginPage() {
+  const [showTestModal, setShowTestModal] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
@@ -268,7 +340,20 @@ export default function LoginPage() {
         </div>
 
         {(API_ENABLED || SUPABASE_ENABLED) ? <APILoginForm /> : <DemoLoginForm />}
+
+        {/* 테스트 모드 체험 버튼 */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => setShowTestModal(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+            style={{ background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}
+          >
+            🧪 테스트 모드로 체험하기
+          </button>
+        </div>
       </div>
+
+      {showTestModal && <TestModeModal onClose={() => setShowTestModal(false)} />}
     </div>
   );
 }
