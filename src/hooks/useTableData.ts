@@ -187,6 +187,13 @@ export function writeDB(next: Record<string, Row[]>): void {
     try {
       window.localStorage.setItem(DB_LS_KEY, JSON.stringify(next));
     } catch { /* 용량 초과 등 무시 */ }
+  } else {
+    // 테스트 모드라도 site_visits는 항상 localStorage에 보존
+    try {
+      const prev = JSON.parse(window.localStorage.getItem(DB_LS_KEY) || '{}');
+      if (next.site_visits) prev.site_visits = next.site_visits;
+      window.localStorage.setItem(DB_LS_KEY, JSON.stringify(prev));
+    } catch { /* 무시 */ }
   }
   _listeners.forEach(fn => { try { fn(); } catch { /* 무시 */ } });
 }
@@ -419,8 +426,8 @@ async function uploadAllToSupabase(db: Record<string, Row[]>): Promise<void> {
  * 실패해도 로컬 데이터는 이미 저장됐으므로 무시.
  */
 async function saveTableToAPI(tableName: string, rows: Row[]): Promise<void> {
-  // 테스트 모드: 서버 저장 완전 차단
-  if (_isTestMode) return;
+  // 테스트 모드: 서버 저장 차단 (단, site_visits는 항상 저장)
+  if (_isTestMode && tableName !== 'site_visits') return;
   // Supabase 모드
   if (SUPABASE_ENABLED) {
     try {
