@@ -329,11 +329,22 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
-            <span className="text-3xl">🏫</span>
+          {/* 봄날 로고 */}
+          <div
+            className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 shadow-xl"
+            style={{ background: 'linear-gradient(135deg, #22C55E 0%, #EC4899 55%, #F59E0B 100%)' }}
+          >
+            <span style={{ fontSize: 42, lineHeight: 1, filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.25))' }}>🌸</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">학원관리 시스템</h1>
-          <p className="text-gray-500 mt-2">
+          <h1
+            className="font-black text-gray-900"
+            style={{ fontSize: '2.6rem', letterSpacing: '-0.04em', lineHeight: 1.1 }}
+          >봄날</h1>
+          <p
+            className="text-sm font-semibold mt-1"
+            style={{ color: '#EC4899', letterSpacing: '-0.01em' }}
+          >학원의 성장을 꽃 피우는 관리솔루션!</p>
+          <p className="text-gray-400 mt-3 text-sm">
             {(API_ENABLED || SUPABASE_ENABLED)
               ? '이메일과 비밀번호로 로그인하세요'
               : '로그인할 계정 유형을 선택하세요'}

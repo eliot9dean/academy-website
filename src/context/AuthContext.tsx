@@ -25,6 +25,11 @@ interface AuthContextType {
   logout: () => void;
   /** 현재 테스트 모드 여부 (모든 쓰기가 DB에 반영되지 않음) */
   isTestMode: boolean;
+  /**
+   * Supabase/API 모드에서 세션 유효성 검사가 완료되기 전까지 true.
+   * Layout.tsx가 이 값이 true이면 보호된 화면을 렌더링하지 않음 → URL 직접 접근 차단.
+   */
+  isInitializing: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -34,6 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [viewAsUser, setViewAsUser] = useState<User | null>(null);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [isTestMode, setIsTestMode] = useState(false);
+  // Supabase/API 세션 확인 완료 전까지 보호된 라우트 렌더링 차단
+  const [isInitializing, setIsInitializing] = useState(SUPABASE_ENABLED || API_ENABLED);
 
   /** 테스트 모드 활성화 헬퍼 (React state + 모듈 플래그 동시 설정) */
   const applyTestMode = React.useCallback((isTest: boolean) => {
@@ -59,14 +66,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (user) {
           setCurrentUser(user);
           applyTestMode(user.isTestAccount ?? false); // 테스트 계정 복원 시 모드 재적용
+        } else {
+          // 유효한 Supabase 세션 없음 → 로컬 스토리지의 stale 유저 정보 제거
+          // (URL 직접 접근으로 로그인 우회 차단)
+          setCurrentUser(null);
         }
-        syncFromAPI().catch(() => {}); // 세션 유무와 무관하게 항상 동기화
+        syncFromAPI().catch(() => {});
+        setIsInitializing(false); // 세션 확인 완료 → 보호된 라우트 접근 허용
+      }).catch(() => {
+        // 네트워크 오류 등 → 안전을 위해 로그아웃 상태로 처리
+        setCurrentUser(null);
+        setIsInitializing(false);
       });
 
       return () => subscription.unsubscribe();
-    } else if (API_ENABLED && getApiToken()) {
-      // PHP 토큰 복원
-      syncFromAPI().catch(() => {});
+    } else if (API_ENABLED) {
+      if (getApiToken()) {
+        // PHP 토큰 복원
+        syncFromAPI().catch(() => {});
+      } else {
+        // 토큰 없음 → 로그인 상태 아님
+        setCurrentUser(null);
+      }
+      setIsInitializing(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -146,7 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, viewAsUser, setViewAsUser, isPasswordRecovery, setIsPasswordRecovery, login, loginWithAPI, logout, isTestMode }}>
+    <AuthContext.Provider value={{ currentUser, viewAsUser, setViewAsUser, isPasswordRecovery, setIsPasswordRecovery, login, loginWithAPI, logout, isTestMode, isInitializing }}>
       {children}
     </AuthContext.Provider>
   );

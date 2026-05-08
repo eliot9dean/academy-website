@@ -174,11 +174,32 @@ function ChangePasswordModal({ onClose, currentEmail }: { onClose: () => void; c
 
 // ─── 메인 레이아웃 ─────────────────────────────────────────────────────────
 export default function Layout() {
-  const { currentUser, viewAsUser, setViewAsUser, logout, isTestMode } = useAuth();
+  const { currentUser, viewAsUser, setViewAsUser, logout, isTestMode, isInitializing } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
   const [collapsed,   setCollapsed]   = useState(false);
   const [showPwModal, setShowPwModal] = useState(false);
+
+  // Supabase/API 세션 확인 중 — 확인 완료 전엔 아무것도 렌더링하지 않음
+  // (URL 직접 접근으로 로그인 우회 차단)
+  if (isInitializing) {
+    return (
+      <div
+        className="flex h-screen items-center justify-center"
+        style={{ background: '#DDE3EE' }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center animate-pulse"
+            style={{ background: 'linear-gradient(135deg, #22C55E 0%, #EC4899 55%, #F59E0B 100%)' }}
+          >
+            <span style={{ fontSize: 26 }}>🌸</span>
+          </div>
+          <span className="text-sm font-medium" style={{ color: '#94A3B8' }}>봄날 로딩 중…</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentUser) return <Navigate to="/" replace />;
 
@@ -197,20 +218,37 @@ export default function Layout() {
       >
         {/* Logo */}
         <div
-          className="flex items-center gap-2.5 px-4 h-14 cursor-pointer"
-          style={{ background: SB.bgHeader, borderBottom: `1px solid ${SB.divider}` }}
+          className="flex items-center gap-2.5 px-4 cursor-pointer flex-shrink-0"
+          style={{
+            background: SB.bgHeader,
+            borderBottom: `1px solid ${SB.divider}`,
+            minHeight: collapsed ? 56 : 68,
+            paddingTop: collapsed ? 0 : 10,
+            paddingBottom: collapsed ? 0 : 10,
+          }}
           onClick={() => { setViewAsUser(null); navigate(currentUser.role === 'admin' ? '/admin' : navItems[0].to); }}
         >
           <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}
+            className="flex items-center justify-center flex-shrink-0 rounded-xl"
+            style={{
+              width: 32, height: 32,
+              background: 'linear-gradient(135deg, #22C55E 0%, #EC4899 55%, #F59E0B 100%)',
+              boxShadow: '0 2px 8px rgba(236,72,153,0.40)',
+            }}
           >
-            <span className="text-sm">🏫</span>
+            <span style={{ fontSize: 18, lineHeight: 1 }}>🌸</span>
           </div>
           {!collapsed && (
-            <span className="font-bold text-sm tracking-tight" style={{ color: SB.textMain }}>
-              학원관리 시스템
-            </span>
+            <div className="flex flex-col min-w-0">
+              <span
+                className="font-black leading-tight"
+                style={{ color: SB.textMain, fontSize: '1rem', letterSpacing: '-0.03em' }}
+              >봄날</span>
+              <span
+                className="truncate"
+                style={{ color: '#6EE7B7', fontSize: '0.6rem', letterSpacing: '-0.01em', lineHeight: 1.3, marginTop: 1 }}
+              >학원의 성장을 꽃 피우는 관리솔루션!</span>
+            </div>
           )}
         </div>
 
@@ -424,7 +462,7 @@ export default function Layout() {
           </button>
           <div className="h-4 w-px" style={{ background: '#E2E8F0' }} />
           <span className="text-sm font-semibold" style={{ color: '#334155' }}>
-            {activeItem?.label ?? '학원관리 시스템'}
+            {activeItem?.label ?? '봄날'}
           </span>
           <div className="ml-auto flex items-center gap-3">
             {isTestMode && (
