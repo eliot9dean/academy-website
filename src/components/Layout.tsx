@@ -549,7 +549,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-3 sm:p-6" style={{ background: '#DDE3EE' }}>
+        <main className="flex-1 overflow-auto p-3 sm:p-6" style={{ background: '#DDE3EE', overscrollBehavior: 'contain' }}>
           <Outlet />
         </main>
       </div>

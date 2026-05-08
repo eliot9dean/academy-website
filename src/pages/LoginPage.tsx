@@ -327,7 +327,7 @@ export default function LoginPage() {
   const [showTestModal, setShowTestModal] = useState(false);
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto" style={{ height: '100%' }}>
+    <div className="bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto" style={{ height: '100%', overscrollBehavior: 'contain' }}>
       <div className="w-full max-w-lg">
         <div className="text-center mb-6 sm:mb-10">
           {/* 브랜드 박스 */}
