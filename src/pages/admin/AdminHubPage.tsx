@@ -213,36 +213,39 @@ export default function AdminHubPage() {
 
       {/* 헤더 — 봄날 브랜드 */}
       <div className="text-center mb-8">
-        {/* 브랜드 박스 — 파란 배경 */}
+        {/* 브랜드 박스 */}
         <div
           style={{
-            background: 'rgb(4, 149, 193)',
-            borderRadius: 16,
-            padding: '20px 28px 16px',
+            background: 'rgb(1, 128, 166)',
+            borderRadius: 14,
+            padding: '16px 22px 14px',
             marginBottom: 14,
-            boxShadow: '0 6px 20px rgba(4,149,193,0.30)',
+            maxWidth: 240,
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            boxShadow: '0 6px 20px rgba(1,128,166,0.30)',
           }}
         >
           <p
             style={{
               fontFamily: "'Gowun Dodum', sans-serif",
-              fontSize: '0.72rem',
-              color: 'rgba(255,255,255,0.85)',
+              fontSize: '0.68rem',
+              color: '#F9A8D4',
               letterSpacing: '0.02em',
-              margin: '0 0 8px',
+              margin: '0 0 6px',
             }}
           >학원의 성장을 꽃 피우는 관리솔루션!</p>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <img
               src="/bomnal-logo.png"
               alt="봄날"
-              style={{ height: 40, width: 40, objectFit: 'contain' }}
+              style={{ height: 36, width: 36, objectFit: 'contain', background: 'transparent' }}
             />
             <span
               style={{
                 fontFamily: "'Gowun Dodum', sans-serif",
-                fontSize: '2.8rem',
+                fontSize: '2.5rem',
                 fontWeight: 400,
                 color: '#FFFFFF',
                 letterSpacing: '0.06em',

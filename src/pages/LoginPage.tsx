@@ -330,38 +330,39 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-10">
-          {/* 브랜드 박스 — 파란 배경으로 눈에 띄게 */}
+          {/* 브랜드 박스 */}
           <div
             style={{
-              background: 'rgb(4, 149, 193)',
-              borderRadius: 18,
-              padding: '24px 32px 20px',
+              background: 'rgb(1, 128, 166)',
+              borderRadius: 16,
+              padding: '18px 24px 16px',
               marginBottom: 20,
-              boxShadow: '0 8px 28px rgba(4,149,193,0.35)',
+              maxWidth: 260,
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              boxShadow: '0 6px 22px rgba(1,128,166,0.35)',
             }}
           >
-            {/* 슬로건 */}
             <p
               style={{
                 fontFamily: "'Gowun Dodum', sans-serif",
-                fontSize: '0.78rem',
-                color: 'rgba(255,255,255,0.85)',
+                fontSize: '0.72rem',
+                color: '#F9A8D4',
                 letterSpacing: '0.02em',
-                margin: '0 0 10px',
+                margin: '0 0 8px',
               }}
             >학원의 성장을 꽃 피우는 관리솔루션!</p>
 
-            {/* 로고 아이콘 + 봄날 텍스트 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
               <img
                 src="/bomnal-logo.png"
                 alt="봄날"
-                style={{ height: 46, width: 46, objectFit: 'contain' }}
+                style={{ height: 42, width: 42, objectFit: 'contain', background: 'transparent' }}
               />
               <span
                 style={{
                   fontFamily: "'Gowun Dodum', sans-serif",
-                  fontSize: '3.4rem',
+                  fontSize: '3rem',
                   fontWeight: 400,
                   color: '#FFFFFF',
                   letterSpacing: '0.06em',
