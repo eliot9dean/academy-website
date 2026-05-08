@@ -236,11 +236,11 @@ export default function AdminHubPage() {
             }}
           >학원의 성장을 꽃 피우는 관리솔루션!</p>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
             <img
               src="/bomnal-logo.png"
               alt="봄날"
-              style={{ height: 36, width: 36, objectFit: 'contain', background: 'transparent' }}
+              style={{ height: 36, width: 36, objectFit: 'contain', mixBlendMode: 'multiply' }}
             />
             <span
               style={{
@@ -253,11 +253,10 @@ export default function AdminHubPage() {
               }}
             >봄 날</span>
           </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', margin: 0 }}>
+            {tab === 'pending' ? '가입 신청 목록' : selectedRole ? `${selectedConfig?.label} 계정을 선택하세요` : '이동할 역할을 선택하세요'}
+          </p>
         </div>
-
-        <p className="text-gray-500 text-sm">
-          {tab === 'pending' ? '가입 신청 목록' : selectedRole ? `${selectedConfig?.label} 계정을 선택하세요` : '이동할 역할을 선택하세요'}
-        </p>
       </div>
 
       {/* 탭 + 사용자 추가 버튼 */}

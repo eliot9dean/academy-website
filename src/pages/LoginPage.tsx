@@ -353,11 +353,11 @@ export default function LoginPage() {
               }}
             >학원의 성장을 꽃 피우는 관리솔루션!</p>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 12 }}>
               <img
                 src="/bomnal-logo.png"
                 alt="봄날"
-                style={{ height: 42, width: 42, objectFit: 'contain', background: 'transparent' }}
+                style={{ height: 42, width: 42, objectFit: 'contain', mixBlendMode: 'multiply' }}
               />
               <span
                 style={{
@@ -370,13 +370,13 @@ export default function LoginPage() {
                 }}
               >봄 날</span>
             </div>
-          </div>
 
-          <p className="text-gray-400 text-sm">
-            {(API_ENABLED || SUPABASE_ENABLED)
-              ? '이메일과 비밀번호로 로그인하세요'
-              : '로그인할 계정 유형을 선택하세요'}
-          </p>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem', margin: 0 }}>
+              {(API_ENABLED || SUPABASE_ENABLED)
+                ? '이메일과 비밀번호로 로그인하세요'
+                : '로그인할 계정 유형을 선택하세요'}
+            </p>
+          </div>
         </div>
 
         {(API_ENABLED || SUPABASE_ENABLED) ? <APILoginForm /> : <DemoLoginForm />}
