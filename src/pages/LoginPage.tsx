@@ -355,7 +355,7 @@ export default function LoginPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 12 }}>
               <img
-                src="/bomnal-logo.png"
+                src="/bomnal-logo2.png"
                 alt="봄날"
                 style={{ height: 42, width: 42, objectFit: 'contain', mixBlendMode: 'multiply' }}
               />

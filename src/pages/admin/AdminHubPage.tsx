@@ -238,7 +238,7 @@ export default function AdminHubPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
             <img
-              src="/bomnal-logo.png"
+              src="/bomnal-logo2.png"
               alt="봄날"
               style={{ height: 36, width: 36, objectFit: 'contain', mixBlendMode: 'multiply' }}
             />
