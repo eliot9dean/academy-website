@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTableData } from '../../hooks/useTableData';
@@ -51,11 +51,39 @@ function nextAppId(users: User[]): string {
   return `u${max + 1}`;
 }
 
+interface SiteVisit {
+  id: string;
+  date: string;       // YYYY-MM-DD
+  userId: string;
+  role: string;
+  ts: number;
+}
+
 export default function AdminHubPage() {
   const navigate = useNavigate();
-  const { setViewAsUser } = useAuth();
+  const { currentUser, setViewAsUser } = useAuth();
   const [allUsers,     setAllUsers]     = useTableData<User>('users');
   const [pendingUsers, setPendingUsers] = useTableData<PendingUser>('pending_users');
+  const [visits,       setVisits]       = useTableData<SiteVisit>('site_visits');
+  const visitLogged = useRef(false);
+
+  // ── 방문 기록 (세션당 1회) ────────────────────────────────────────────────
+  useEffect(() => {
+    if (visitLogged.current || !currentUser) return;
+    visitLogged.current = true;
+    const today = new Date().toISOString().slice(0, 10);
+    setVisits(prev => [...prev, {
+      id: `v_${Date.now()}`,
+      date: today,
+      userId: currentUser.id,
+      role: currentUser.role,
+      ts: Date.now(),
+    }]);
+  }, [currentUser, setVisits]);
+
+  // ── 금일 방문자 수 계산 ───────────────────────────────────────────────────
+  const today = new Date().toISOString().slice(0, 10);
+  const todayVisitCount = visits.filter(v => v.date === today).length;
 
   // ── 탭 ────────────────────────────────────────────────────────────────────
   const [tab, setTab] = useState<'hub' | 'pending'>('hub');
@@ -256,6 +284,23 @@ export default function AdminHubPage() {
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', margin: 0 }}>
             {tab === 'pending' ? '가입 신청 목록' : selectedRole ? `${selectedConfig?.label} 계정을 선택하세요` : '이동할 역할을 선택하세요'}
           </p>
+        </div>
+
+        {/* 금일 방문자 */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          background: 'rgba(1,128,166,0.10)',
+          border: '1px solid rgba(1,128,166,0.20)',
+          borderRadius: 20,
+          padding: '5px 14px',
+          marginTop: 10,
+        }}>
+          <span style={{ fontSize: '0.8rem' }}>👤</span>
+          <span style={{ fontSize: '0.78rem', color: '#0B7A9E', fontWeight: 600 }}>
+            금일 방문 <span style={{ color: '#0E6B8A', fontWeight: 700 }}>{todayVisitCount}</span>명
+          </span>
         </div>
       </div>
 
