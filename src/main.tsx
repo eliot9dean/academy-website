@@ -54,6 +54,30 @@ if (_hash.includes('access_token') && _hash.includes('type=recovery')) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── 모바일 pull-to-refresh 완전 차단 ─────────────────────────────────────────
+// 비스크롤 영역(header 등)에서 아래로 스와이프하면 브라우저 전체가 끌려내려가는 현상 방지.
+// 스크롤 가능한 영역 내부에서의 정상 스크롤은 허용.
+(function preventPullToRefresh() {
+  let startY = 0;
+  document.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0) return; // 위로 스와이프(콘텐츠 아래로) — 허용
+
+    // 아래로 스와이프: 스크롤 가능한 부모 중 scrollTop > 0인 게 있으면 허용
+    let el = e.target as HTMLElement | null;
+    while (el && el !== document.documentElement) {
+      if (el.scrollHeight > el.clientHeight && el.scrollTop > 0) return;
+      el = el.parentElement;
+    }
+    // 스크롤 맨 위에서 아래로 당기는 중 → 차단
+    e.preventDefault();
+  }, { passive: false });
+})();
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
