@@ -237,18 +237,18 @@ export default function AdminHubPage() {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col items-center justify-center min-h-full py-10">
+    <div className="flex flex-col items-center justify-center min-h-full py-6 sm:py-10 px-3 sm:px-0">
 
       {/* 헤더 — 봄날 브랜드 */}
-      <div className="text-center mb-8">
+      <div className="text-center mb-6 sm:mb-8">
         {/* 브랜드 박스 */}
         <div
           style={{
             background: 'rgb(1, 128, 166)',
             borderRadius: 14,
-            padding: '16px 22px 14px',
+            padding: '14px 18px 12px',
             marginBottom: 14,
-            maxWidth: 240,
+            maxWidth: 260,
             marginLeft: 'auto',
             marginRight: 'auto',
             boxShadow: '0 6px 20px rgba(1,128,166,0.30)',
@@ -305,17 +305,17 @@ export default function AdminHubPage() {
       </div>
 
       {/* 탭 + 사용자 추가 버튼 */}
-      <div className="flex items-center gap-2 mb-6 w-full max-w-md">
-        <div className="flex bg-gray-100 rounded-xl p-1 flex-1">
+      <div className="flex items-center gap-2 mb-4 sm:mb-6 w-full max-w-md">
+        <div className="flex bg-gray-100 rounded-xl p-1 flex-1 min-w-0">
           <button
             onClick={() => { setTab('hub'); setSelectedRole(null); }}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${tab === 'hub' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex-1 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap ${tab === 'hub' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
           >
             역할별 이동
           </button>
           <button
             onClick={() => { setTab('pending'); setSelectedRole(null); }}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 ${tab === 'pending' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex-1 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap ${tab === 'pending' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
           >
             승인 대기
             {pendingUsers.length > 0 && (
@@ -328,7 +328,7 @@ export default function AdminHubPage() {
         {/* 사용자 추가 버튼 */}
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-1.5 px-3 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm flex-shrink-0"
+          className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2.5 bg-blue-600 text-white text-xs sm:text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm flex-shrink-0"
         >
           <span className="text-base leading-none">+</span>
           <span>추가</span>
@@ -340,16 +340,16 @@ export default function AdminHubPage() {
         <div className="w-full max-w-md">
           {/* Step 1: 역할 선택 */}
           {!selectedRole && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
               {roleConfig.map(r => (
                 <button
                   key={r.role}
                   onClick={() => setSelectedRole(r.role)}
-                  className={`p-5 border-2 rounded-2xl text-left transition-all shadow-sm hover:shadow-md ${r.color}`}
+                  className={`p-3 sm:p-5 border-2 rounded-2xl text-left transition-all shadow-sm hover:shadow-md ${r.color}`}
                 >
-                  <div className="text-3xl mb-3">{r.icon}</div>
-                  <div className="font-semibold text-gray-800 text-sm">{r.label}</div>
-                  <div className="text-gray-500 text-xs mt-1">{r.description}</div>
+                  <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">{r.icon}</div>
+                  <div className="font-semibold text-gray-800 text-xs sm:text-sm">{r.label}</div>
+                  <div className="text-gray-500 text-xs mt-0.5 sm:mt-1 line-clamp-2">{r.description}</div>
                 </button>
               ))}
             </div>

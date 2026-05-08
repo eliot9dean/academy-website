@@ -327,17 +327,18 @@ export default function LoginPage() {
   const [showTestModal, setShowTestModal] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-3 sm:p-4">
       <div className="w-full max-w-lg">
-        <div className="text-center mb-10">
+        <div className="text-center mb-6 sm:mb-10">
           {/* 브랜드 박스 */}
           <div
             style={{
               background: 'rgb(1, 128, 166)',
               borderRadius: 16,
-              padding: '18px 24px 16px',
-              marginBottom: 20,
-              maxWidth: 260,
+              padding: '16px 20px 14px',
+              marginBottom: 16,
+              maxWidth: 280,
+              width: '80%',
               marginLeft: 'auto',
               marginRight: 'auto',
               boxShadow: '0 6px 22px rgba(1,128,166,0.35)',

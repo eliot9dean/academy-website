@@ -1,9 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Navigate, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { API_ENABLED } from '../config/api';
 import { changePasswordAPI } from '../hooks/useTableData';
 import type { UserRole } from '../types';
+
+/** 모바일 판정 (640px 이하) */
+function useIsMobile() {
+  const [m, setM] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 640);
+  useEffect(() => {
+    const h = () => setM(window.innerWidth <= 640);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return m;
+}
 
 interface NavItem { to: string; label: string; icon: string }
 
@@ -195,8 +206,13 @@ export default function Layout() {
   const { currentUser, viewAsUser, setViewAsUser, logout, isTestMode, isInitializing } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
+  const isMobile = useIsMobile();
   const [collapsed,   setCollapsed]   = useState(false);
+  const [mobileOpen,  setMobileOpen]  = useState(false);
   const [showPwModal, setShowPwModal] = useState(false);
+
+  // 모바일에서 라우트 이동 시 사이드바 닫기
+  useEffect(() => { if (isMobile) setMobileOpen(false); }, [location.pathname, isMobile]);
 
   // Supabase/API 세션 확인 중 — 확인 완료 전엔 아무것도 렌더링하지 않음
   // (URL 직접 접근으로 로그인 우회 차단)
@@ -244,10 +260,21 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen" style={{ background: '#DDE3EE' }}>
+      {/* 모바일 오버레이 배경 */}
+      {isMobile && mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 transition-opacity"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
       {/* ── Sidebar ── */}
       <aside
-        className="flex flex-col flex-shrink-0 transition-all duration-200"
-        style={{ width: collapsed ? 60 : 220, background: SB.bg }}
+        className={`flex flex-col flex-shrink-0 transition-all duration-200 ${
+          isMobile
+            ? `fixed inset-y-0 left-0 z-50 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`
+            : ''
+        }`}
+        style={{ width: isMobile ? 240 : collapsed ? 60 : 220, background: SB.bg }}
       >
         {/* Logo */}
         <div
@@ -475,7 +502,7 @@ export default function Layout() {
           style={{ background: '#FFFFFF', borderBottom: '1px solid #DDE3EE' }}
         >
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => isMobile ? setMobileOpen(!mobileOpen) : setCollapsed(!collapsed)}
             className="p-1.5 rounded-lg transition-colors"
             style={{ color: '#94A3B8' }}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F5F9'}
@@ -491,27 +518,32 @@ export default function Layout() {
           <span className="text-sm font-semibold" style={{ color: '#334155' }}>
             {activeItem?.label ?? '봄날'}
           </span>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 sm:gap-3 min-w-0">
             {isTestMode && (
               <div
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold"
+                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap"
                 style={{ background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}
               >
-                🧪 테스트 모드 — 변경사항이 저장되지 않습니다
+                <span>🧪</span>
+                <span className="hidden sm:inline">테스트 모드 — 변경사항이 저장되지 않습니다</span>
+                <span className="sm:hidden">테스트</span>
               </div>
             )}
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: '#94A3B8' }}>
+            <div className="flex items-center gap-1 sm:gap-1.5 text-xs whitespace-nowrap" style={{ color: '#94A3B8' }}>
               <span>📅</span>
-              <span>
+              <span className="hidden sm:inline">
                 {new Date().toLocaleDateString('ko-KR', {
                   year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
                 })}
+              </span>
+              <span className="sm:hidden">
+                {new Date().toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
               </span>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6" style={{ background: '#DDE3EE' }}>
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6" style={{ background: '#DDE3EE' }}>
           <Outlet />
         </main>
       </div>
