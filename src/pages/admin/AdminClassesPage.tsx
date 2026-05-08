@@ -93,7 +93,7 @@ export default function AdminClassesPage() {
 
 
   const teachers = users
-    .filter(u => u.role === 'teacher')
+    .filter(u => u.role === 'teacher' && !u.isTestAccount)
     .sort((a, b) => (a.joinDate ?? '').localeCompare(b.joinDate ?? ''));
 
   return (

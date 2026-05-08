@@ -61,6 +61,57 @@ const SB = {
   iconActive: '#A5B4FC',
 };
 
+// ─── 사이드바 로고 (이미지 우선 → 실패 시 텍스트 폴백) ──────────────────────
+function SidebarLogo() {
+  const [imgOk, setImgOk] = useState<boolean | null>(null);
+
+  return (
+    <div className="flex flex-col justify-center min-w-0" style={{ minHeight: 36 }}>
+      {/* 로고 이미지 */}
+      <img
+        src="/bomnal-logo.png"
+        alt="봄날"
+        onLoad={() => setImgOk(true)}
+        onError={() => setImgOk(false)}
+        style={{
+          height: 28,
+          maxWidth: 150,
+          objectFit: 'contain',
+          objectPosition: 'left center',
+          display: imgOk === false ? 'none' : 'block',
+          filter: 'brightness(0) invert(1)',   // 다크 사이드바에서 흰색으로 표시
+          opacity: 0.95,
+        }}
+      />
+      {/* 이미지 실패 시 텍스트 폴백 */}
+      {imgOk === false && (
+        <div className="flex flex-col">
+          <span
+            style={{
+              color: '#FFFFFF',
+              fontSize: '1rem',
+              fontWeight: 700,
+              fontFamily: "'Gowun Dodum', 'Pretendard', sans-serif",
+              letterSpacing: '0.02em',
+              lineHeight: 1.2,
+            }}
+          >봄날</span>
+          <span
+            style={{
+              color: '#6EE7B7',
+              fontSize: '0.58rem',
+              letterSpacing: '0em',
+              lineHeight: 1.3,
+              marginTop: 1,
+              whiteSpace: 'nowrap',
+            }}
+          >학원의 성장을 꽃 피우는 관리솔루션!</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── 비밀번호 변경 모달 ────────────────────────────────────────────────────
 function ChangePasswordModal({ onClose, currentEmail }: { onClose: () => void; currentEmail: string }) {
   const [oldPw,  setOldPw]  = useState('');
@@ -203,6 +254,21 @@ export default function Layout() {
 
   if (!currentUser) return <Navigate to="/" replace />;
 
+  // ── 역할 불일치 URL 접근 차단 ──────────────────────────────────────────
+  // 예) 선생님이 /#/admin/schedule 을 직접 입력 → 본인 첫 메뉴로 리다이렉트
+  const pathRole = (['admin', 'teacher', 'staff', 'parent'] as const).find(r =>
+    location.pathname.startsWith(`/${r}`)
+  );
+  // viewAsUser(관리자 다른역할 보기) 중이면 displayUser 기준 체크
+  const effectiveRole = (viewAsUser ?? currentUser).role;
+  if (pathRole && pathRole !== effectiveRole && !(currentUser.role === 'admin' && pathRole === effectiveRole)) {
+    // 관리자는 모든 경로 접근 가능(다른역할 보기), 그 외는 본인 역할 경로만 허용
+    if (currentUser.role !== 'admin' || viewAsUser) {
+      const firstPath = navByRole[effectiveRole][0]?.to ?? '/';
+      return <Navigate to={firstPath} replace />;
+    }
+  }
+
   // 관리자가 다른 역할로 보기 중이면 해당 역할 기준으로 표시
   const displayUser = viewAsUser ?? currentUser;
   const navItems    = navByRole[displayUser.role];
@@ -218,37 +284,29 @@ export default function Layout() {
       >
         {/* Logo */}
         <div
-          className="flex items-center gap-2.5 px-4 cursor-pointer flex-shrink-0"
+          className="flex items-center gap-2.5 cursor-pointer flex-shrink-0"
           style={{
             background: SB.bgHeader,
             borderBottom: `1px solid ${SB.divider}`,
-            minHeight: collapsed ? 56 : 68,
-            paddingTop: collapsed ? 0 : 10,
-            paddingBottom: collapsed ? 0 : 10,
+            minHeight: 56,
+            padding: collapsed ? '0 14px' : '10px 14px',
           }}
           onClick={() => { setViewAsUser(null); navigate(currentUser.role === 'admin' ? '/admin' : navItems[0].to); }}
         >
+          {/* 항상 표시되는 꽃 아이콘 */}
           <div
             className="flex items-center justify-center flex-shrink-0 rounded-xl"
             style={{
-              width: 32, height: 32,
+              width: 30, height: 30,
               background: 'linear-gradient(135deg, #22C55E 0%, #EC4899 55%, #F59E0B 100%)',
               boxShadow: '0 2px 8px rgba(236,72,153,0.40)',
             }}
           >
-            <span style={{ fontSize: 18, lineHeight: 1 }}>🌸</span>
+            <span style={{ fontSize: 17, lineHeight: 1 }}>🌸</span>
           </div>
+          {/* 확장 상태일 때 로고 이미지 또는 텍스트 */}
           {!collapsed && (
-            <div className="flex flex-col min-w-0">
-              <span
-                className="font-black leading-tight"
-                style={{ color: SB.textMain, fontSize: '1rem', letterSpacing: '-0.03em' }}
-              >봄날</span>
-              <span
-                className="truncate"
-                style={{ color: '#6EE7B7', fontSize: '0.6rem', letterSpacing: '-0.01em', lineHeight: 1.3, marginTop: 1 }}
-              >학원의 성장을 꽃 피우는 관리솔루션!</span>
-            </div>
+            <SidebarLogo />
           )}
         </div>
 
@@ -416,11 +474,13 @@ export default function Layout() {
         {/* Logout */}
         <div className="p-2" style={{ borderTop: `1px solid ${SB.divider}`, background: SB.bgHeader }}>
           <button
-            onClick={() => {
+            onClick={async () => {
+              // Supabase signOut을 await해야 세션이 완전히 종료됨
+              // (이전: await 없이 navigate → 다른 사람이 URL 입력 시 세션 재사용 버그)
               Object.keys(localStorage)
                 .filter(k => k.startsWith('ams_'))
                 .forEach(k => localStorage.removeItem(k));
-              logout();
+              await logout();
               navigate('/');
             }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"

@@ -163,7 +163,7 @@ export default function AdminFinancePage() {
     ? Math.round(withdrawnInPeriod.length / (enrolledCount + withdrawnInPeriod.length) * 100) : 0;
 
   // ── 강사 효율 ────────────────────────────────────────────────────────────
-  const teachers = users.filter(u => u.role === 'teacher').sort((a, b) => (a.joinDate ?? '').localeCompare(b.joinDate ?? ''));
+  const teachers = users.filter(u => u.role === 'teacher' && !u.isTestAccount).sort((a, b) => (a.joinDate ?? '').localeCompare(b.joinDate ?? ''));
   const teacherRows = teachers.map(t => {
     const tClasses = classes.filter(c => c.teacherId === t.id);
     const stuIds   = new Set(tClasses.flatMap(c => c.studentIds as string[]));

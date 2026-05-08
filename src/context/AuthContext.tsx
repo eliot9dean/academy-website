@@ -22,7 +22,7 @@ interface AuthContextType {
   login: (role: UserRole, userId: string) => void;
   /** API/Supabase 모드 로그인 (이메일 + 비밀번호) */
   loginWithAPI: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   /** 현재 테스트 모드 여부 (모든 쓰기가 DB에 반영되지 않음) */
   isTestMode: boolean;
   /**
@@ -157,11 +157,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ── 로그아웃 ──────────────────────────────────────────────────────────────
-  const logout = () => {
+  // async로 Supabase signOut을 완전히 기다린 후 리턴.
+  // Layout.tsx 로그아웃 버튼이 이를 await하여 세션이 정리된 뒤 navigate('/') 실행.
+  // (이전에는 signOut을 기다리지 않아 다른 사람이 URL 직접 입력 시 세션이 살아있었음)
+  const logout = async () => {
     applyTestMode(false); // 테스트 모드 해제
     setCurrentUser(null);
     if (SUPABASE_ENABLED) {
-      supabaseLogout().catch(() => {});
+      await supabaseLogout(); // ← 반드시 완료 대기
     } else if (API_ENABLED) {
       clearApiToken();
     }
