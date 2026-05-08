@@ -367,20 +367,20 @@ export default function LoginPage() {
           <p
             style={{
               fontFamily: "'Gowun Dodum', sans-serif",
-              fontSize: '1rem',
-              color: '#3A7D44',
+              fontSize: '0.8rem',
+              color: '#EC4899',
               letterSpacing: '0.01em',
-              marginBottom: 14,
+              marginBottom: 12,
             }}
           >학원의 성장을 꽃 피우는 관리솔루션!</p>
 
           {/* 소형 로고 이미지 + 봄날 텍스트 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 20 }}>
-            <BomналLogo height={48} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
+            <BomналLogo height={34} />
             <span
               style={{
                 fontFamily: "'Gowun Dodum', sans-serif",
-                fontSize: '2rem',
+                fontSize: '3.2rem',
                 fontWeight: 400,
                 color: '#2D6A35',
                 letterSpacing: '0.06em',

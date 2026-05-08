@@ -249,8 +249,8 @@ export default function AdminHubPage() {
         <p
           style={{
             fontFamily: "'Gowun Dodum', sans-serif",
-            fontSize: '0.92rem',
-            color: '#3A7D44',
+            fontSize: '0.8rem',
+            color: '#EC4899',
             letterSpacing: '0.01em',
             marginBottom: 12,
           }}
@@ -258,11 +258,11 @@ export default function AdminHubPage() {
 
         {/* 소형 로고 이미지 + 봄날 텍스트 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
-          <HubLogo height={42} />
+          <HubLogo height={30} />
           <span
             style={{
               fontFamily: "'Gowun Dodum', sans-serif",
-              fontSize: '1.75rem',
+              fontSize: '2.8rem',
               fontWeight: 400,
               color: '#2D6A35',
               letterSpacing: '0.06em',
