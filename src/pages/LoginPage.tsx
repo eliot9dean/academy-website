@@ -330,34 +330,45 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-10">
-          {/* 슬로건 */}
-          <p
+          {/* 브랜드 박스 — 파란 배경으로 눈에 띄게 */}
+          <div
             style={{
-              fontFamily: "'Gowun Dodum', sans-serif",
-              fontSize: '0.8rem',
-              color: '#EC4899',
-              letterSpacing: '0.01em',
-              marginBottom: 12,
+              background: 'rgb(4, 149, 193)',
+              borderRadius: 18,
+              padding: '24px 32px 20px',
+              marginBottom: 20,
+              boxShadow: '0 8px 28px rgba(4,149,193,0.35)',
             }}
-          >학원의 성장을 꽃 피우는 관리솔루션!</p>
-
-          {/* 로고 아이콘 + 봄날 텍스트 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
-            <img
-              src="/bomnal-logo.png"
-              alt="봄날"
-              style={{ height: 34, width: 34, objectFit: 'contain' }}
-            />
-            <span
+          >
+            {/* 슬로건 */}
+            <p
               style={{
                 fontFamily: "'Gowun Dodum', sans-serif",
-                fontSize: '3.2rem',
-                fontWeight: 400,
-                color: '#2D6A35',
-                letterSpacing: '0.06em',
-                lineHeight: 1,
+                fontSize: '0.78rem',
+                color: 'rgba(255,255,255,0.85)',
+                letterSpacing: '0.02em',
+                margin: '0 0 10px',
               }}
-            >봄 날</span>
+            >학원의 성장을 꽃 피우는 관리솔루션!</p>
+
+            {/* 로고 아이콘 + 봄날 텍스트 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+              <img
+                src="/bomnal-logo.png"
+                alt="봄날"
+                style={{ height: 46, width: 46, objectFit: 'contain' }}
+              />
+              <span
+                style={{
+                  fontFamily: "'Gowun Dodum', sans-serif",
+                  fontSize: '3.4rem',
+                  fontWeight: 400,
+                  color: '#FFFFFF',
+                  letterSpacing: '0.06em',
+                  lineHeight: 1,
+                }}
+              >봄 날</span>
+            </div>
           </div>
 
           <p className="text-gray-400 text-sm">

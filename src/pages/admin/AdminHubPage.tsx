@@ -213,34 +213,43 @@ export default function AdminHubPage() {
 
       {/* 헤더 — 봄날 브랜드 */}
       <div className="text-center mb-8">
-        {/* 슬로건 */}
-        <p
+        {/* 브랜드 박스 — 파란 배경 */}
+        <div
           style={{
-            fontFamily: "'Gowun Dodum', sans-serif",
-            fontSize: '0.8rem',
-            color: '#EC4899',
-            letterSpacing: '0.01em',
-            marginBottom: 12,
+            background: 'rgb(4, 149, 193)',
+            borderRadius: 16,
+            padding: '20px 28px 16px',
+            marginBottom: 14,
+            boxShadow: '0 6px 20px rgba(4,149,193,0.30)',
           }}
-        >학원의 성장을 꽃 피우는 관리솔루션!</p>
-
-        {/* 로고 아이콘 + 봄날 텍스트 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
-          <img
-            src="/bomnal-logo.png"
-            alt="봄날"
-            style={{ height: 30, width: 30, objectFit: 'contain' }}
-          />
-          <span
+        >
+          <p
             style={{
               fontFamily: "'Gowun Dodum', sans-serif",
-              fontSize: '2.8rem',
-              fontWeight: 400,
-              color: '#2D6A35',
-              letterSpacing: '0.06em',
-              lineHeight: 1,
+              fontSize: '0.72rem',
+              color: 'rgba(255,255,255,0.85)',
+              letterSpacing: '0.02em',
+              margin: '0 0 8px',
             }}
-          >봄 날</span>
+          >학원의 성장을 꽃 피우는 관리솔루션!</p>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <img
+              src="/bomnal-logo.png"
+              alt="봄날"
+              style={{ height: 40, width: 40, objectFit: 'contain' }}
+            />
+            <span
+              style={{
+                fontFamily: "'Gowun Dodum', sans-serif",
+                fontSize: '2.8rem',
+                fontWeight: 400,
+                color: '#FFFFFF',
+                letterSpacing: '0.06em',
+                lineHeight: 1,
+              }}
+            >봄 날</span>
+          </div>
         </div>
 
         <p className="text-gray-500 text-sm">
