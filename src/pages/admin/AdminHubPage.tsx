@@ -12,38 +12,6 @@ import {
 } from '../../lib/supabase';
 import type { User, UserRole } from '../../types';
 
-// ─── 봄날 로고 (소형) ─────────────────────────────────────────────────────────
-function HubLogo({ height = 80 }: { height?: number }) {
-  const [imgOk, setImgOk] = useState<boolean | null>(null);
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: height }}>
-      <img
-        src="/bomnal-logo.png"
-        alt="봄날 커뮤니케이션즈"
-        onLoad={() => setImgOk(true)}
-        onError={() => setImgOk(false)}
-        style={{
-          height,
-          width: 'auto',
-          maxWidth: '100%',
-          objectFit: 'contain',
-          display: imgOk === false ? 'none' : 'block',
-        }}
-      />
-      {imgOk === false && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: Math.round(height * 0.55) }}>🌸</span>
-          <span style={{
-            fontFamily: "'Gowun Dodum', sans-serif",
-            fontSize: Math.round(height * 0.38),
-            color: '#2D6A35',
-            letterSpacing: '0.04em',
-          }}>봄날</span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface PendingUser {
   supabaseId: string;

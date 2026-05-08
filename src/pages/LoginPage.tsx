@@ -5,39 +5,6 @@ import { API_ENABLED, SUPABASE_ENABLED } from '../config/api';
 import { supabaseSignUp } from '../lib/supabase';
 import type { UserRole } from '../types';
 
-// ─── 봄날 로고 이미지 (이미지 우선 → 실패 시 🌸+텍스트 폴백) ─────────────────
-function BomналLogo({ height = 90 }: { height?: number }) {
-  const [imgOk, setImgOk] = useState<boolean | null>(null);
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: height }}>
-      <img
-        src="/bomnal-logo.png"
-        alt="봄날 커뮤니케이션즈"
-        onLoad={() => setImgOk(true)}
-        onError={() => setImgOk(false)}
-        style={{
-          height,
-          width: 'auto',
-          maxWidth: '100%',
-          objectFit: 'contain',
-          display: imgOk === false ? 'none' : 'block',
-        }}
-      />
-      {imgOk === false && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: Math.round(height * 0.65) }}>🌸</span>
-          <span style={{
-            fontFamily: "'Gowun Dodum', sans-serif",
-            fontSize: Math.round(height * 0.45),
-            color: '#2D6A35',
-            letterSpacing: '0.04em',
-          }}>봄날</span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 const roles: {
   role: UserRole; label: string; icon: string;
