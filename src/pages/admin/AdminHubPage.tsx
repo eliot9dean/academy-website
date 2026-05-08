@@ -256,9 +256,8 @@ export default function AdminHubPage() {
           }}
         >학원의 성장을 꽃 피우는 관리솔루션!</p>
 
-        {/* 소형 로고 이미지 + 봄날 텍스트 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
-          <HubLogo height={30} />
+        {/* 봄날 텍스트 */}
+        <div style={{ marginBottom: 14 }}>
           <span
             style={{
               fontFamily: "'Gowun Dodum', sans-serif",

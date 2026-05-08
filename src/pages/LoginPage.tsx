@@ -374,9 +374,8 @@ export default function LoginPage() {
             }}
           >학원의 성장을 꽃 피우는 관리솔루션!</p>
 
-          {/* 소형 로고 이미지 + 봄날 텍스트 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
-            <BomналLogo height={34} />
+          {/* 봄날 텍스트 */}
+          <div style={{ marginBottom: 20 }}>
             <span
               style={{
                 fontFamily: "'Gowun Dodum', sans-serif",
