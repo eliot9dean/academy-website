@@ -341,8 +341,13 @@ export default function LoginPage() {
             }}
           >학원의 성장을 꽃 피우는 관리솔루션!</p>
 
-          {/* 봄날 텍스트 */}
-          <div style={{ marginBottom: 20 }}>
+          {/* 로고 아이콘 + 봄날 텍스트 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
+            <img
+              src="/bomnal-logo.png"
+              alt="봄날"
+              style={{ height: 34, width: 34, objectFit: 'contain' }}
+            />
             <span
               style={{
                 fontFamily: "'Gowun Dodum', sans-serif",

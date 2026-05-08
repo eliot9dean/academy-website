@@ -224,8 +224,13 @@ export default function AdminHubPage() {
           }}
         >학원의 성장을 꽃 피우는 관리솔루션!</p>
 
-        {/* 봄날 텍스트 */}
-        <div style={{ marginBottom: 14 }}>
+        {/* 로고 아이콘 + 봄날 텍스트 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
+          <img
+            src="/bomnal-logo.png"
+            alt="봄날"
+            style={{ height: 30, width: 30, objectFit: 'contain' }}
+          />
           <span
             style={{
               fontFamily: "'Gowun Dodum', sans-serif",
