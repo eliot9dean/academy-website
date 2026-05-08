@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTableData } from '../../hooks/useTableData';
@@ -11,6 +11,30 @@ import {
   supabaseSaveTable,
 } from '../../lib/supabase';
 import type { User, UserRole } from '../../types';
+
+// ─── 봄날 로고 (소형) ─────────────────────────────────────────────────────────
+function HubLogo() {
+  const [imgOk, setImgOk] = useState<boolean | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  useEffect(() => {}, []); // 마운트 시 상태 초기화용
+  return (
+    <>
+      <img
+        src="/bomnal-logo.png"
+        alt="봄날 커뮤니케이션즈"
+        onLoad={() => setImgOk(true)}
+        onError={() => setImgOk(false)}
+        style={{
+          height: 44,
+          width: 'auto',
+          objectFit: 'contain',
+          display: imgOk === false ? 'none' : 'block',
+        }}
+      />
+      {imgOk === false && <span style={{ fontSize: 36 }}>🌸</span>}
+    </>
+  );
+}
 
 interface PendingUser {
   supabaseId: string;
@@ -210,13 +234,35 @@ export default function AdminHubPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-full py-10">
 
-      {/* 헤더 */}
+      {/* 헤더 — 봄날 브랜드 */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
-          <span className="text-3xl">🏫</span>
+        {/* 슬로건 */}
+        <p
+          style={{
+            fontFamily: "'Gowun Dodum', sans-serif",
+            fontSize: '0.95rem',
+            color: '#3A7D44',
+            letterSpacing: '0.01em',
+            marginBottom: 10,
+          }}
+        >학원의 성장을 꽃 피우는 관리솔루션!</p>
+
+        {/* 로고 + 봄날 */}
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <HubLogo />
+          <span
+            style={{
+              fontFamily: "'Gowun Dodum', sans-serif",
+              fontSize: '1.75rem',
+              fontWeight: 400,
+              color: '#2D6A35',
+              letterSpacing: '0.04em',
+              lineHeight: 1,
+            }}
+          >봄날</span>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">학원관리 시스템</h1>
-        <p className="text-gray-500 mt-1 text-sm">
+
+        <p className="text-gray-500 text-sm">
           {tab === 'pending' ? '가입 신청 목록' : selectedRole ? `${selectedConfig?.label} 계정을 선택하세요` : '이동할 역할을 선택하세요'}
         </p>
       </div>

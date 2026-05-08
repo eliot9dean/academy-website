@@ -5,38 +5,29 @@ import { API_ENABLED, SUPABASE_ENABLED } from '../config/api';
 import { supabaseSignUp } from '../lib/supabase';
 import type { UserRole } from '../types';
 
-// ─── 봄날 로고 (이미지 우선 → 실패 시 텍스트 폴백) ──────────────────────────
+// ─── 봄날 로고 이미지 (이미지 우선 → 실패 시 🌸 폴백) ───────────────────────
+// 로고를 '봄날' 텍스트 왼쪽에 배치하는 소형 버전
 function BomналLogo() {
-  const [imgOk, setImgOk] = useState<boolean | null>(null); // null=로딩 중
+  const [imgOk, setImgOk] = useState<boolean | null>(null);
 
   return (
-    <div style={{ minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* 실제 로고 이미지 */}
+    <>
       <img
         src="/bomnal-logo.png"
         alt="봄날 커뮤니케이션즈"
         onLoad={() => setImgOk(true)}
         onError={() => setImgOk(false)}
         style={{
-          height: 90,
-          maxWidth: 360,
+          height: 52,                   // 로고 세로 크기 (aspect ratio 유지)
+          width: 'auto',
           objectFit: 'contain',
           display: imgOk === false ? 'none' : 'block',
         }}
       />
-      {/* 로드 실패 시 그라데이션 폴백 */}
       {imgOk === false && (
-        <div
-          style={{
-            width: 80, height: 80, borderRadius: 20,
-            background: 'linear-gradient(135deg, #22C55E 0%, #EC4899 55%, #F59E0B 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 8px 24px rgba(236,72,153,0.35)',
-            fontSize: 42,
-          }}
-        >🌸</div>
+        <span style={{ fontSize: 40 }}>🌸</span>
       )}
-    </div>
+    </>
   );
 }
 
@@ -364,15 +355,33 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-10">
-          {/* 봄날 커뮤니케이션즈 로고 */}
-          <div className="flex justify-center mb-3">
-            <BomналLogo />
-          </div>
+          {/* 슬로건 */}
           <p
-            className="text-sm font-medium mt-1"
-            style={{ color: '#EC4899', fontFamily: "'Gowun Dodum', sans-serif", letterSpacing: '0.01em' }}
+            style={{
+              fontFamily: "'Gowun Dodum', sans-serif",
+              fontSize: '1.05rem',
+              color: '#3A7D44',
+              letterSpacing: '0.01em',
+              marginBottom: 14,
+            }}
           >학원의 성장을 꽃 피우는 관리솔루션!</p>
-          <p className="text-gray-400 mt-3 text-sm">
+
+          {/* 로고 + 봄날 텍스트 (가로 배치) */}
+          <div className="flex items-center justify-center gap-3">
+            <BomналLogo />
+            <span
+              style={{
+                fontFamily: "'Gowun Dodum', sans-serif",
+                fontSize: '2rem',
+                fontWeight: 400,
+                color: '#2D6A35',
+                letterSpacing: '0.04em',
+                lineHeight: 1,
+              }}
+            >봄날</span>
+          </div>
+
+          <p className="text-gray-400 mt-5 text-sm">
             {(API_ENABLED || SUPABASE_ENABLED)
               ? '이메일과 비밀번호로 로그인하세요'
               : '로그인할 계정 유형을 선택하세요'}

@@ -61,54 +61,21 @@ const SB = {
   iconActive: '#A5B4FC',
 };
 
-// ─── 사이드바 로고 (이미지 우선 → 실패 시 텍스트 폴백) ──────────────────────
+// ─── 사이드바 로고 텍스트 ─────────────────────────────────────────────────────
+// 사이드바는 다크 배경이라 컬러 로고 대신 Gowun Dodum 폰트 '봄날' 텍스트 사용
 function SidebarLogo() {
-  const [imgOk, setImgOk] = useState<boolean | null>(null);
-
   return (
-    <div className="flex flex-col justify-center min-w-0" style={{ minHeight: 36 }}>
-      {/* 로고 이미지 */}
-      <img
-        src="/bomnal-logo.png"
-        alt="봄날"
-        onLoad={() => setImgOk(true)}
-        onError={() => setImgOk(false)}
-        style={{
-          height: 28,
-          maxWidth: 150,
-          objectFit: 'contain',
-          objectPosition: 'left center',
-          display: imgOk === false ? 'none' : 'block',
-          filter: 'brightness(0) invert(1)',   // 다크 사이드바에서 흰색으로 표시
-          opacity: 0.95,
-        }}
-      />
-      {/* 이미지 실패 시 텍스트 폴백 */}
-      {imgOk === false && (
-        <div className="flex flex-col">
-          <span
-            style={{
-              color: '#FFFFFF',
-              fontSize: '1rem',
-              fontWeight: 700,
-              fontFamily: "'Gowun Dodum', 'Pretendard', sans-serif",
-              letterSpacing: '0.02em',
-              lineHeight: 1.2,
-            }}
-          >봄날</span>
-          <span
-            style={{
-              color: '#6EE7B7',
-              fontSize: '0.58rem',
-              letterSpacing: '0em',
-              lineHeight: 1.3,
-              marginTop: 1,
-              whiteSpace: 'nowrap',
-            }}
-          >학원의 성장을 꽃 피우는 관리솔루션!</span>
-        </div>
-      )}
-    </div>
+    <span
+      style={{
+        fontFamily: "'Gowun Dodum', 'Pretendard', sans-serif",
+        fontSize: '1.1rem',
+        fontWeight: 400,
+        color: '#FFFFFF',
+        letterSpacing: '0.05em',
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
+      }}
+    >봄날</span>
   );
 }
 
