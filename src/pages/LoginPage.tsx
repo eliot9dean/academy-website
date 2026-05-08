@@ -363,22 +363,33 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-10">
-          {/* 봄날 로고 이미지 — 이것 자체가 브랜드 */}
-          <BomналLogo height={100} />
-
           {/* 슬로건 */}
           <p
             style={{
               fontFamily: "'Gowun Dodum', sans-serif",
-              fontSize: '0.95rem',
+              fontSize: '1rem',
               color: '#3A7D44',
               letterSpacing: '0.01em',
-              marginTop: 10,
-              marginBottom: 0,
+              marginBottom: 14,
             }}
           >학원의 성장을 꽃 피우는 관리솔루션!</p>
 
-          <p className="text-gray-400 mt-4 text-sm">
+          {/* 소형 로고 이미지 + 봄날 텍스트 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 20 }}>
+            <BomналLogo height={48} />
+            <span
+              style={{
+                fontFamily: "'Gowun Dodum', sans-serif",
+                fontSize: '2rem',
+                fontWeight: 400,
+                color: '#2D6A35',
+                letterSpacing: '0.06em',
+                lineHeight: 1,
+              }}
+            >봄 날</span>
+          </div>
+
+          <p className="text-gray-400 text-sm">
             {(API_ENABLED || SUPABASE_ENABLED)
               ? '이메일과 비밀번호로 로그인하세요'
               : '로그인할 계정 유형을 선택하세요'}

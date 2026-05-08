@@ -245,20 +245,31 @@ export default function AdminHubPage() {
 
       {/* 헤더 — 봄날 브랜드 */}
       <div className="text-center mb-8">
-        {/* 봄날 로고 이미지 — 이것 자체가 브랜드 */}
-        <HubLogo height={80} />
-
         {/* 슬로건 */}
         <p
           style={{
             fontFamily: "'Gowun Dodum', sans-serif",
-            fontSize: '0.88rem',
+            fontSize: '0.92rem',
             color: '#3A7D44',
             letterSpacing: '0.01em',
-            marginTop: 8,
             marginBottom: 12,
           }}
         >학원의 성장을 꽃 피우는 관리솔루션!</p>
+
+        {/* 소형 로고 이미지 + 봄날 텍스트 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
+          <HubLogo height={42} />
+          <span
+            style={{
+              fontFamily: "'Gowun Dodum', sans-serif",
+              fontSize: '1.75rem',
+              fontWeight: 400,
+              color: '#2D6A35',
+              letterSpacing: '0.06em',
+              lineHeight: 1,
+            }}
+          >봄 날</span>
+        </div>
 
         <p className="text-gray-500 text-sm">
           {tab === 'pending' ? '가입 신청 목록' : selectedRole ? `${selectedConfig?.label} 계정을 선택하세요` : '이동할 역할을 선택하세요'}
