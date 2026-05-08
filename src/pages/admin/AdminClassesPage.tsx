@@ -105,14 +105,14 @@ export default function AdminClassesPage() {
         </p>
       </div>
 
-      <div className="flex gap-4 sm:gap-5 items-start overflow-x-auto pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-start pb-2">
         {teachers.map((teacher) => {
           const teacherClasses = classes.filter(c => c.teacherId === teacher.id);
           if (!teacherClasses.length) return null;
           const subjects = [...new Set(teacherClasses.map(c => c.subject))].join(' · ');
 
           return (
-            <div key={teacher.id} className="flex-1 min-w-[280px]">
+            <div key={teacher.id} className="w-full sm:flex-1 sm:min-w-[280px]">
               <div className="flex items-center gap-2.5 mb-3 px-1">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
                   style={{ background: '#EEF2FF', color: '#4F46E5' }}>
