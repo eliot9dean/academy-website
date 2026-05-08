@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, Navigate, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { API_ENABLED } from '../config/api';
@@ -208,11 +208,17 @@ export default function Layout() {
   const location  = useLocation();
   const isMobile = useIsMobile();
   const [collapsed,   setCollapsed]   = useState(false);
-  const [mobileOpen,  setMobileOpen]  = useState(false);
+  const [mobileOpen,  setMobileOpen]  = useState(true);
   const [showPwModal, setShowPwModal] = useState(false);
 
-  // 모바일에서 라우트 이동 시 사이드바 닫기
-  useEffect(() => { if (isMobile) setMobileOpen(false); }, [location.pathname, isMobile]);
+  // 모바일에서 라우트 이동 시 사이드바 닫기 (최초 렌더는 제외)
+  const prevPath = useRef(location.pathname);
+  useEffect(() => {
+    if (isMobile && prevPath.current !== location.pathname) {
+      setMobileOpen(false);
+    }
+    prevPath.current = location.pathname;
+  }, [location.pathname, isMobile]);
 
   // Supabase/API 세션 확인 중 — 확인 완료 전엔 아무것도 렌더링하지 않음
   // (URL 직접 접근으로 로그인 우회 차단)
@@ -495,7 +501,7 @@ export default function Layout() {
       </aside>
 
       {/* ── Main ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Topbar */}
         <header
           className="h-14 flex items-center px-5 gap-3 flex-shrink-0"
@@ -543,7 +549,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-3 sm:p-6" style={{ background: '#DDE3EE' }}>
+        <main className="flex-1 overflow-auto p-3 sm:p-6" style={{ background: '#DDE3EE' }}>
           <Outlet />
         </main>
       </div>

@@ -105,7 +105,7 @@ export default function AdminClassesPage() {
         </p>
       </div>
 
-      <div className="flex gap-5 items-start overflow-x-auto pb-2">
+      <div className="flex gap-4 sm:gap-5 items-start overflow-x-auto pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
         {teachers.map((teacher) => {
           const teacherClasses = classes.filter(c => c.teacherId === teacher.id);
           if (!teacherClasses.length) return null;
