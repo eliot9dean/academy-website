@@ -15,6 +15,35 @@
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <!-- 인앱 브라우저(Threads/Instagram/Facebook 등) 감지 → 외부 브라우저로 리다이렉트 -->
+    <script>
+      (function() {
+        var ua = navigator.userAgent || '';
+        // 인앱 브라우저 감지: Instagram, Threads, Facebook, Line, KakaoTalk 등
+        var inApp = /FBAN|FBAV|Instagram|Threads|Line\/|KAKAOTALK|NAVER|Snapchat|Twitter/i.test(ua);
+        // 이미 일반 브라우저(Chrome, Safari, Samsung Internet 등)이면 무시
+        if (!inApp) return;
+
+        var url = window.location.href;
+
+        // Android: intent scheme으로 Chrome 강제 실행
+        if (/android/i.test(ua)) {
+          window.location.href = 'intent://' + url.replace(/https?:\/\//, '') +
+            '#Intent;scheme=https;package=com.android.chrome;end';
+          return;
+        }
+
+        // iOS: 직접 외부 브라우저 열기 불가 → 안내 배너 표시
+        if (/iPhone|iPad|iPod/i.test(ua)) {
+          document.addEventListener('DOMContentLoaded', function() {
+            var banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#1E293B;color:#fff;padding:14px 16px;font-size:13px;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,0.3)';
+            banner.innerHTML = '<span>🌐 Safari에서 열면 더 쾌적해요!</span><a href="x-safari-' + url + '" style="background:#4F46E5;color:#fff;padding:6px 12px;border-radius:8px;font-weight:600;font-size:12px;text-decoration:none;white-space:nowrap">Safari로 열기</a>';
+            document.body.prepend(banner);
+          });
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <!-- 모바일 pull-to-refresh 완전 차단 (Tailwind 레이어보다 높은 우선순위) -->
