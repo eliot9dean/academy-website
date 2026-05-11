@@ -19,7 +19,14 @@
     <script>
       (function() {
         var ua = navigator.userAgent || '';
-        var inApp = /FBAN|FBAV|Instagram|Threads|Line\/|KAKAOTALK|NAVER|Snapchat|Twitter/i.test(ua);
+        // 1) 명시적 인앱 브라우저 키워드
+        var knownInApp = /FBAN|FBAV|Instagram|Threads|Line\/|KAKAOTALK|NAVER|Snapchat|Twitter|musical_ly|BytedanceWebview/i.test(ua);
+        // 2) Android WebView 일반 감지: "wv" 포함 또는 "Version/X.X Chrome" 패턴 (실제 Chrome은 Version/ 없음)
+        var androidWebView = /android/i.test(ua) && (/\bwv\b/.test(ua) || /Version\/[\d.]+.*Chrome/i.test(ua));
+        // 3) iOS WebView: Safari 없이 AppleWebKit 있음
+        var iosWebView = /iPhone|iPad|iPod/i.test(ua) && /AppleWebKit/i.test(ua) && !/Safari/i.test(ua);
+
+        var inApp = knownInApp || androidWebView || iosWebView;
         if (!inApp) return;
 
         var url = window.location.href;
