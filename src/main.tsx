@@ -54,27 +54,55 @@ if (_hash.includes('access_token') && _hash.includes('type=recovery')) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── 모바일 pull-to-refresh 완전 차단 ─────────────────────────────────────────
-// 비스크롤 영역(header 등)에서 아래로 스와이프하면 브라우저 전체가 끌려내려가는 현상 방지.
-// 스크롤 가능한 영역 내부에서의 정상 스크롤은 허용.
+// ── 모바일 pull-to-refresh / overscroll 완전 차단 ────────────────────────────
+// 모든 touchmove를 감시하여, 페이지 전체가 끌려내려가는(pull-to-refresh) 동작 차단.
+// 단, 스크롤 가능한 영역 내부에서의 정상 스크롤은 허용.
 (function preventPullToRefresh() {
   let startY = 0;
+  let startX = 0;
+
   document.addEventListener('touchstart', (e) => {
     startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
   }, { passive: true });
 
   document.addEventListener('touchmove', (e) => {
     const dy = e.touches[0].clientY - startY;
-    if (dy <= 0) return; // 위로 스와이프(콘텐츠 아래로) — 허용
+    const dx = e.touches[0].clientX - startX;
 
-    // 아래로 스와이프: 스크롤 가능한 부모 중 scrollTop > 0인 게 있으면 허용
-    let el = e.target as HTMLElement | null;
-    while (el && el !== document.documentElement) {
-      if (el.scrollHeight > el.clientHeight && el.scrollTop > 0) return;
-      el = el.parentElement;
+    // 수평 스와이프면 간섭하지 않음
+    if (Math.abs(dx) > Math.abs(dy)) return;
+
+    // 위로 스와이프(콘텐츠 아래로 스크롤): 스크롤 가능한 부모가 맨 아래면 차단, 아니면 허용
+    if (dy < 0) {
+      let el = e.target as HTMLElement | null;
+      while (el && el !== document.documentElement) {
+        if (el.scrollHeight > el.clientHeight) {
+          // 이 요소가 스크롤 가능 — 맨 아래에 도달했는지 체크
+          const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+          if (!atBottom) return; // 아직 스크롤 여유 있음 → 허용
+        }
+        el = el.parentElement;
+      }
+      // 스크롤 가능한 요소가 없거나 맨 아래 도달 → 차단 (아래쪽 overscroll)
+      e.preventDefault();
+      return;
     }
-    // 스크롤 맨 위에서 아래로 당기는 중 → 차단
-    e.preventDefault();
+
+    // 아래로 스와이프(콘텐츠 위로 스크롤 / pull-to-refresh):
+    if (dy > 0) {
+      let el = e.target as HTMLElement | null;
+      while (el && el !== document.documentElement) {
+        if (el.scrollHeight > el.clientHeight && el.scrollTop > 0) {
+          // 스크롤 가능한 부모 중 scrollTop > 0인 게 있으면 → 정상 스크롤 허용
+          return;
+        }
+        el = el.parentElement;
+      }
+      // 스크롤 맨 위에서 아래로 당기는 중 → pull-to-refresh 차단
+      e.preventDefault();
+      return;
+    }
   }, { passive: false });
 })();
 

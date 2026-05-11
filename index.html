@@ -17,5 +17,13 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- 모바일 pull-to-refresh 완전 차단 (Tailwind 레이어보다 높은 우선순위) -->
+    <style>
+      html, body {
+        overscroll-behavior: none !important;
+        overscroll-behavior-y: none !important;
+        -webkit-overflow-scrolling: auto !important;
+      }
+    </style>
   </body>
 </html>

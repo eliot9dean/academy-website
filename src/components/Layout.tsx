@@ -265,7 +265,7 @@ export default function Layout() {
   const badge       = roleBadgeDark[displayUser.role];
 
   return (
-    <div className="flex" style={{ background: '#DDE3EE', height: '100%' }}>
+    <div className="flex" style={{ background: '#DDE3EE', height: '100%', overflow: 'hidden', overscrollBehavior: 'none' }}>
       {/* 모바일 오버레이 배경 */}
       {isMobile && mobileOpen && (
         <div
@@ -549,7 +549,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-3 sm:p-6" style={{ background: '#DDE3EE', overscrollBehavior: 'contain' }}>
+        <main className="flex-1 overflow-auto p-3 sm:p-6" style={{ background: '#DDE3EE', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' }}>
           <Outlet />
         </main>
       </div>
