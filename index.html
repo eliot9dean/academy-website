@@ -24,6 +24,11 @@
         overscroll-behavior-y: none !important;
         -webkit-overflow-scrolling: auto !important;
       }
+      /* 비스크롤 영역에서 터치 시 브라우저 제스처 차단 */
+      header, aside, nav {
+        touch-action: none !important;
+        overscroll-behavior: none !important;
+      }
     </style>
   </body>
 </html>

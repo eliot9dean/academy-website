@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* ─── 최우선: pull-to-refresh 차단 (layer 밖 = 가장 높은 우선순위) ─── */
+html {
+  overscroll-behavior: none !important;
+  overflow: hidden !important;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
