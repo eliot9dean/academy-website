@@ -15,33 +15,63 @@
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <!-- 인앱 브라우저(Threads/Instagram/Facebook 등) 감지 → 외부 브라우저로 리다이렉트 -->
+    <!-- 인앱 브라우저(Threads/Instagram/Facebook 등) 감지 → 외부 브라우저 유도 -->
     <script>
       (function() {
         var ua = navigator.userAgent || '';
-        // 인앱 브라우저 감지: Instagram, Threads, Facebook, Line, KakaoTalk 등
         var inApp = /FBAN|FBAV|Instagram|Threads|Line\/|KAKAOTALK|NAVER|Snapchat|Twitter/i.test(ua);
-        // 이미 일반 브라우저(Chrome, Safari, Samsung Internet 등)이면 무시
         if (!inApp) return;
 
         var url = window.location.href;
 
-        // Android: intent scheme으로 Chrome 강제 실행
-        if (/android/i.test(ua)) {
-          window.location.href = 'intent://' + url.replace(/https?:\/\//, '') +
-            '#Intent;scheme=https;package=com.android.chrome;end';
-          return;
+        // 오버레이 생성
+        function showOverlay() {
+          var d = document.createElement('div');
+          d.id = '_inapp_overlay';
+          d.style.cssText = 'position:fixed;inset:0;z-index:999999;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;font-family:-apple-system,Pretendard,sans-serif;text-align:center';
+          d.innerHTML = '<div style="font-size:56px;margin-bottom:16px">🌸</div>'
+            + '<h1 style="font-size:20px;font-weight:700;color:#1E293B;margin:0 0 8px">봄날</h1>'
+            + '<p style="font-size:14px;color:#64748B;margin:0 0 24px;line-height:1.5">인앱 브라우저에서는 일부 기능이 제한됩니다.<br>외부 브라우저에서 열어주세요.</p>'
+            + '<button id="_inapp_btn" style="background:#4F46E5;color:#fff;border:none;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:16px;box-shadow:0 4px 12px rgba(79,70,229,0.3)">Chrome으로 열기</button>'
+            + '<p style="font-size:12px;color:#94A3B8;margin:0;line-height:1.6">또는 우측 상단 <b>⋮</b> 메뉴에서<br><b>"다른 브라우저에서 열기"</b>를 눌러주세요.</p>';
+          document.body.prepend(d);
+
+          document.getElementById('_inapp_btn').onclick = function() {
+            // 방법 1: intent scheme (일부 WebView에서 동작)
+            var intentUrl = 'intent://' + url.replace(/https?:\/\//, '')
+              + '#Intent;scheme=https;package=com.android.chrome;end';
+
+            // 방법 2: 삼성 브라우저
+            var samsungUrl = 'samsung-browser://navigate?url=' + encodeURIComponent(url);
+
+            // Android
+            if (/android/i.test(ua)) {
+              // iframe trick으로 intent 시도
+              var iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              iframe.src = intentUrl;
+              document.body.appendChild(iframe);
+
+              // 0.5초 후 안 열리면 googlechrome scheme 시도
+              setTimeout(function() {
+                window.location.href = 'googlechrome://navigate?url=' + encodeURIComponent(url);
+              }, 500);
+
+              // 1초 후에도 안 열리면 일반 window.open 시도
+              setTimeout(function() {
+                window.open(url, '_system');
+              }, 1000);
+            }
+            // iOS
+            else if (/iPhone|iPad|iPod/i.test(ua)) {
+              window.open(url, '_blank');
+            }
+          };
         }
 
-        // iOS: 직접 외부 브라우저 열기 불가 → 안내 배너 표시
-        if (/iPhone|iPad|iPod/i.test(ua)) {
-          document.addEventListener('DOMContentLoaded', function() {
-            var banner = document.createElement('div');
-            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#1E293B;color:#fff;padding:14px 16px;font-size:13px;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,0.3)';
-            banner.innerHTML = '<span>🌐 Safari에서 열면 더 쾌적해요!</span><a href="x-safari-' + url + '" style="background:#4F46E5;color:#fff;padding:6px 12px;border-radius:8px;font-weight:600;font-size:12px;text-decoration:none;white-space:nowrap">Safari로 열기</a>';
-            document.body.prepend(banner);
-          });
-        }
+        // DOM 로드 후 또는 즉시
+        if (document.body) showOverlay();
+        else document.addEventListener('DOMContentLoaded', showOverlay);
       })();
     </script>
     <div id="root"></div>
