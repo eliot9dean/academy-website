@@ -43,6 +43,7 @@ function AppRoutes() {
           <Route path="/admin" element={<Layout />}>
             <Route index element={<AdminHubPage />} />
             <Route path="classes" element={<AdminClassesPage />} />
+            <Route path="class/:classId" element={<TeacherClassDetailPage />} />
             <Route path="schedule" element={<AdminSchedulePage />} />
             <Route path="daily-reports" element={<AdminDailyReportsPage />} />
             <Route path="conversion" element={<AdminConversionPage />} />

@@ -177,7 +177,7 @@ export default function AdminClassesPage() {
                         transition: 'opacity 0.2s, filter 0.2s',
                         cursor: 'pointer',
                       }}
-                      onClick={() => navigate(`/teacher/class/${cls.id}`)}>
+                      onClick={() => navigate(`/admin/class/${cls.id}`)}>
                       {/* 반 색상 상단 스트라이프 */}
                       <div style={{ height: 4, background: isToday ? pal.border : '#CBD5E1' }} />
                       {/* 비수업일 뱃지 — 카드 중앙 오버레이 */}
