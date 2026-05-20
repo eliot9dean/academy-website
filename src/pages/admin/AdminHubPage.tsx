@@ -53,7 +53,7 @@ function nextAppId(users: User[]): string {
 
 export default function AdminHubPage() {
   const navigate = useNavigate();
-  const { currentUser, setViewAsUser } = useAuth();
+  const { setViewAsUser } = useAuth();
   const [allUsers,     setAllUsers]     = useTableData<User>('users');
   const [pendingUsers, setPendingUsers] = useTableData<PendingUser>('pending_users');
 
